@@ -41,9 +41,6 @@ onMounted(() => {
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <Card>
         <template #content>
-          <div
-            class="absolute -right-10 -bottom-10 w-32 h-32 bg-violet-600/5 rounded-full blur-2xl group-hover:bg-violet-600/10 transition-all duration-300"
-          ></div>
           <div class="flex items-center justify-between">
             <div>
               <p
@@ -77,9 +74,6 @@ onMounted(() => {
 
       <Card>
         <template #content>
-          <div
-            class="absolute -right-10 -bottom-10 w-32 h-32 bg-indigo-600/5 rounded-full blur-2xl group-hover:bg-indigo-600/10 transition-all duration-300"
-          ></div>
           <div class="flex items-center justify-between">
             <div>
               <p
