@@ -176,7 +176,7 @@ const formatCurrency = (val: number) => {
           <!-- Edit & Delete Buttons (Editor Only) -->
           <div
             v-if="authStore.hasPermission('transaction:create')"
-            class="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            class="flex gap-1.5"
           >
             <Button
               icon="pi pi-pencil"
