@@ -206,20 +206,18 @@ const formatDate = (dateVal?: string) => {
 
             <div
               v-if="authStore.hasPermission('transaction:create')"
-              class="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+              class="flex gap-1.5"
               @click.stop
             >
               <Button
                 icon="pi pi-pencil"
                 severity="secondary"
-                text
                 size="small"
                 @click="openEditDialog(project)"
               />
               <Button
                 icon="pi pi-trash"
                 severity="danger"
-                text
                 size="small"
                 @click.stop="triggerDelete(project.id)"
               />
