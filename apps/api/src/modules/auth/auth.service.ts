@@ -67,6 +67,7 @@ export class AuthService {
         tenant: {
           id: user.tenant.id,
           name: user.tenant.name,
+          code: user.tenant.code,
           address: user.tenant.address,
           waReceiptTemplate: user.tenant.waReceiptTemplate,
           pdfHeaderTemplate: user.tenant.pdfHeaderTemplate,
@@ -209,6 +210,7 @@ export class AuthService {
             tenant: {
               id: user.tenant.id,
               name: user.tenant.name,
+              code: user.tenant.code,
               address: user.tenant.address,
               waReceiptTemplate: user.tenant.waReceiptTemplate,
               pdfHeaderTemplate: user.tenant.pdfHeaderTemplate,
@@ -290,6 +292,7 @@ export class AuthService {
           tenant: {
             id: user.tenant.id,
             name: user.tenant.name,
+            code: user.tenant.code,
             address: user.tenant.address,
             waReceiptTemplate: user.tenant.waReceiptTemplate,
             pdfHeaderTemplate: user.tenant.pdfHeaderTemplate,

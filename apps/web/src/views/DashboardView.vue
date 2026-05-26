@@ -158,13 +158,14 @@ const filteredMenuItems = computed(() => {
             <h1 class="sidebar-title">KasKita</h1>
           </div>
           <!-- Close Button for Mobile -->
-          <Button
-            icon="pi pi-times"
-            text
-            severity="secondary"
-            class="md:hidden!"
-            @click="isSidebarOpen = false"
-          />
+          <div class="md:hidden">
+            <Button
+              icon="pi pi-times"
+              text
+              severity="secondary"
+              @click="isSidebarOpen = false"
+            />
+          </div>
         </div>
 
         <nav class="sidebar-nav">
@@ -192,20 +193,34 @@ const filteredMenuItems = computed(() => {
             <div class="topbar">
               <div class="topbar-left">
                 <!-- Sidebar Toggle Button for Mobile -->
-                <Button
-                  icon="pi pi-bars"
-                  text
-                  severity="secondary"
-                  class="md:hidden!"
-                  @click="isSidebarOpen = true"
-                />
-                <div class="topbar-user">
-                  <p class="topbar-name">
-                    {{ authStore.user?.name }}
-                  </p>
-                  <p class="topbar-role">
-                    {{ authStore.userRole }}
-                  </p>
+                <div class="md:hidden">
+                  <Button
+                    icon="pi pi-bars"
+                    text
+                    severity="secondary"
+                    @click="isSidebarOpen = true"
+                  />
+                </div>
+
+                <!-- Clickable Profile Header Block -->
+                <div
+                  class="cursor-pointer hover:bg-slate-50 border border-slate-100 hover:border-slate-200 px-3 py-1.5 rounded-xl transition-all duration-200 flex items-center gap-2.5"
+                  title="Lihat Profil Saya"
+                  @click="router.push('/dashboard/profile')"
+                >
+                  <div
+                    class="h-8 w-8 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-sm select-none"
+                  >
+                    {{ authStore.user?.name?.charAt(0).toUpperCase() || 'U' }}
+                  </div>
+                  <div class="topbar-user select-none text-left">
+                    <p class="topbar-name">
+                      {{ authStore.user?.name }}
+                    </p>
+                    <p class="topbar-role">
+                      {{ authStore.userRole }}
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -292,7 +307,7 @@ const filteredMenuItems = computed(() => {
 
 /* Header */
 .header {
-  @apply relative bg-white p-4 rounded-xl shadow-md;
+  @apply sticky top-6 z-10 bg-white p-4 rounded-xl shadow-md;
 }
 
 /* Topbar */

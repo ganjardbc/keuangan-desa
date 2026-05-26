@@ -11,6 +11,7 @@ export interface User {
   tenant?: {
     id: string
     name: string
+    code?: string
     address?: string
     waReceiptTemplate?: string
     pdfHeaderTemplate?: string

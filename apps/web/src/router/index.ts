@@ -19,6 +19,7 @@ import TenantManagementView from '../modules/admin/views/TenantManagementView.vu
 import UserManagementView from '../modules/admin/views/UserManagementView.vue'
 import RoleManagementView from '../modules/admin/views/RoleManagementView.vue'
 import UnauthorizedView from '../views/UnauthorizedView.vue'
+import ProfileView from '../views/ProfileView.vue'
 
 const routes = [
   {
@@ -111,6 +112,11 @@ const routes = [
         name: 'admin-roles',
         component: RoleManagementView,
         meta: { requiresSuperAdmin: true },
+      },
+      {
+        path: 'profile',
+        name: 'profile',
+        component: ProfileView,
       },
     ],
   },
