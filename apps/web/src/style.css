@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@import "tailwindcss-primeui";
+
+@theme {
+  --dark-mode: selector(.p-dark);
+}

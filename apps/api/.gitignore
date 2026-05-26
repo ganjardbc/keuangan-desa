@@ -1,0 +1,44 @@
+# Compiled output
+/dist
+/build
+
+# Dependency directories
+node_modules/
+
+# IDEs and editors
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# NestJS / TypeScript
+tsconfig.schemastore.json
+.build/
+
+# Testing
+coverage/
+.nyc_output/
+
+# Turbo build cache
+.turbo/
+
+# dotenv environment variable files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.test
+.env.production

@@ -1,0 +1,10 @@
+{
+  "extends": "@keuangan-desa/tsconfig/nestjs.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "sourceMap": true,
+    "incremental": true
+  },
+  "include": ["src/**/*"]
+}

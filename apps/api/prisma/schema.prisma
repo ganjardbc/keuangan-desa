@@ -1,0 +1,175 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Tenant {
+  id                 String           @id @default(uuid())
+  name               String
+  code               String           @unique
+  address            String?
+  isActive           Boolean          @default(true)
+  waReceiptTemplate  String?          @db.Text
+  pdfHeaderTemplate  String?          @db.Text
+  users              User[]
+  warga              Warga[]
+  kasAccounts        KasAccount[]
+  proyekKegiatan     ProyekKegiatan[]
+  jenisIuran         JenisIuran[]
+  transactions       Transaction[]
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  password     String
+  name         String
+  roleId       String
+  role         Role          @relation(fields: [roleId], references: [id])
+  tenantId     String
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  transactions Transaction[]
+  auditLogs    AuditLog[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Role {
+  id              String           @id @default(uuid())
+  name            String           @unique
+  description     String?
+  users           User[]
+  rolePermissions RolePermission[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model Permission {
+  id              String           @id @default(uuid())
+  name            String           @unique
+  description     String?
+  rolePermissions RolePermission[]
+  createdAt       DateTime         @default(now())
+}
+
+model RolePermission {
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id])
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+}
+
+model Warga {
+  id               String            @id @default(uuid())
+  name             String
+  houseNumber      String
+  phoneNumber      String?
+  status           String            // 'PEMILIK' | 'KONTRAK' | 'KOSONG'
+  isActive         Boolean           @default(true)
+  tenantId         String
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  iuranBulanan     IuranBulanan[]
+  pembayaranIuran  PembayaranIuran[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model JenisIuran {
+  id              String            @id @default(uuid())
+  name            String
+  defaultAmount   Float
+  period          String            // 'BULANAN' | 'TAHUNAN' | 'INSIDENTAL'
+  tenantId        String
+  tenant          Tenant            @relation(fields: [tenantId], references: [id])
+  iuranBulanan    IuranBulanan[]
+  pembayaranIuran PembayaranIuran[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+model IuranBulanan {
+  id           String     @id @default(uuid())
+  wargaId      String
+  warga        Warga      @relation(fields: [wargaId], references: [id])
+  jenisIuranId String
+  jenisIuran   JenisIuran @relation(fields: [jenisIuranId], references: [id])
+  customAmount Float?
+  createdAt    DateTime   @default(now())
+}
+
+model PembayaranIuran {
+  id            String      @id @default(uuid())
+  wargaId       String
+  warga         Warga       @relation(fields: [wargaId], references: [id])
+  jenisIuranId  String
+  jenisIuran    JenisIuran  @relation(fields: [jenisIuranId], references: [id])
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  month         Int
+  year          Int
+  amountPaid    Float
+  paidAt        DateTime    @default(now())
+}
+
+model KasAccount {
+  id            String        @id @default(uuid())
+  name          String
+  accountNumber String?
+  balance       Float         @default(0)
+  tenantId      String
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  transactions  Transaction[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model ProyekKegiatan {
+  id           String        @id @default(uuid())
+  name         String
+  budgetLimit  Float
+  status       String        @default("PERENCANAAN") // 'PERENCANAAN' | 'BERJALAN' | 'SELESAI'
+  startDate    DateTime?
+  endDate      DateTime?
+  tenantId     String
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
+}
+
+model Transaction {
+  id               String            @id @default(uuid())
+  type             String            // 'PEMASUKAN' | 'PENGELUARAN'
+  title            String
+  amount           Float
+  category         String
+  date             String            // YYYY-MM-DD
+  kasAccountId     String
+  kasAccount       KasAccount        @relation(fields: [kasAccountId], references: [id])
+  createdById      String
+  createdBy        User              @relation(fields: [createdById], references: [id])
+  proyekKegiatanId String?
+  proyekKegiatan   ProyekKegiatan?   @relation(fields: [proyekKegiatanId], references: [id])
+  tenantId         String
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  attachmentUrl    String?
+  pembayaranIuran  PembayaranIuran[]
+  createdAt        DateTime          @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String   // 'LOGIN' | 'CREATE_TX' | 'UPDATE_IURAN' | dll
+  details   String
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
