@@ -99,158 +99,159 @@ const copyToClipboard = async (text: string) => {
       </Card>
 
       <!-- Right Column: Tenant Info -->
-      <Card
-        v-if="!isSuperAdmin && user?.tenant"
-        class="w-full"
-      >
-        <template #content>
-          <div class="space-y-6">
-            <div>
-              <h3
-                class="text-sm font-bold text-slate-900 uppercase tracking-widest border-b border-slate-100 pb-2"
-              >
-                Informasi Komunitas
-              </h3>
-              <p class="text-xs text-slate-500 mt-1">
-                Detail profil wilayah administrasi / RT / RW Anda
-              </p>
-            </div>
-
-            <!-- Fields -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div class="space-y-1">
-                <p
-                  class="text-xs font-semibold text-slate-400 uppercase tracking-wider"
+      <div class="w-full">
+        <Card
+          v-if="!isSuperAdmin && user?.tenant"
+        >
+          <template #content>
+            <div class="space-y-6">
+              <div>
+                <h3
+                  class="text-sm font-bold text-slate-900 uppercase tracking-widest border-b border-slate-100 pb-2"
                 >
-                  Nama Komunitas
-                </p>
-                <p class="text-base font-bold text-slate-800">
-                  {{ user.tenant.name }}
+                  Informasi Komunitas
+                </h3>
+                <p class="text-xs text-slate-500 mt-1">
+                  Detail profil wilayah administrasi / RT / RW Anda
                 </p>
               </div>
 
-              <div class="space-y-1">
-                <p
-                  class="text-xs font-semibold text-slate-400 uppercase tracking-wider"
-                >
-                  Alamat Wilayah
-                </p>
-                <p class="text-base font-medium text-slate-700">
-                  {{ user.tenant.address || '-' }}
-                </p>
-              </div>
-            </div>
-
-            <!-- Tenant Code Panel with Copy Feature -->
-            <div
-              class="bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-3 relative overflow-hidden"
-            >
-              <div
-                class="absolute -right-10 -bottom-10 w-28 h-28 rounded-full bg-violet-500/5 blur-2xl"
-              ></div>
-
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-xs font-bold text-slate-900 tracking-wide">
-                    Kode Gabung Komunitas
-                  </p>
-                  <p class="text-[10px] text-slate-500 mt-0.5">
-                    Berikan kode ini kepada warga baru agar dapat mendaftar dan
-                    bergabung ke wilayah ini
-                  </p>
-                </div>
-                <div class="flex items-center gap-2">
-                  <span
-                    v-if="isCopied"
-                    class="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-lg animate-pulse"
-                    >Tersalin!</span
+              <!-- Fields -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-1">
+                  <p
+                    class="text-xs font-semibold text-slate-400 uppercase tracking-wider"
                   >
-                  <Button
-                    icon="pi pi-copy"
-                    severity="secondary"
-                    outlined
-                    title="Salin Kode"
-                    @click="copyToClipboard(user.tenant.code || '')"
-                  />
+                    Nama Komunitas
+                  </p>
+                  <p class="text-base font-bold text-slate-800">
+                    {{ user.tenant.name }}
+                  </p>
+                </div>
+
+                <div class="space-y-1">
+                  <p
+                    class="text-xs font-semibold text-slate-400 uppercase tracking-wider"
+                  >
+                    Alamat Wilayah
+                  </p>
+                  <p class="text-base font-medium text-slate-700">
+                    {{ user.tenant.address || '-' }}
+                  </p>
                 </div>
               </div>
 
+              <!-- Tenant Code Panel with Copy Feature -->
               <div
-                class="flex items-center mt-2 bg-white border border-slate-200 rounded-xl p-3 justify-center text-center"
+                class="bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-3 relative overflow-hidden"
               >
-                <span
-                  class="text-lg font-black font-mono text-indigo-650 tracking-widest select-all"
+                <div
+                  class="absolute -right-10 -bottom-10 w-28 h-28 rounded-full bg-violet-500/5 blur-2xl"
+                ></div>
+
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-xs font-bold text-slate-900 tracking-wide">
+                      Kode Gabung Komunitas
+                    </p>
+                    <p class="text-[10px] text-slate-500 mt-0.5">
+                      Berikan kode ini kepada warga baru agar dapat mendaftar dan
+                      bergabung ke wilayah ini
+                    </p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span
+                      v-if="isCopied"
+                      class="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-lg animate-pulse"
+                      >Tersalin!</span
+                    >
+                    <Button
+                      icon="pi pi-copy"
+                      severity="secondary"
+                      outlined
+                      title="Salin Kode"
+                      @click="copyToClipboard(user.tenant.code || '')"
+                    />
+                  </div>
+                </div>
+
+                <div
+                  class="flex items-center mt-2 bg-white border border-slate-200 rounded-xl p-3 justify-center text-center"
                 >
-                  {{ user.tenant.code || '-' }}
-                </span>
+                  <span
+                    class="text-lg font-black font-mono text-indigo-650 tracking-widest select-all"
+                  >
+                    {{ user.tenant.code || '-' }}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-        </template>
-      </Card>
+          </template>
+        </Card>
 
-      <!-- Super Admin System View -->
-      <Card
-        v-else-if="isSuperAdmin"
-        class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 lg:col-span-2 flex flex-col justify-between"
-      >
-        <template #content>
-          <div class="space-y-6">
-            <div>
-              <h3
-                class="text-sm font-bold text-slate-900 uppercase tracking-widest border-b border-slate-100 pb-2"
+        <!-- Super Admin System View -->
+        <Card
+          v-else-if="isSuperAdmin"
+          class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 lg:col-span-2 flex flex-col justify-between"
+        >
+          <template #content>
+            <div class="space-y-6">
+              <div>
+                <h3
+                  class="text-sm font-bold text-slate-900 uppercase tracking-widest border-b border-slate-100 pb-2"
+                >
+                  Informasi Sistem Global
+                </h3>
+                <p class="text-xs text-slate-500 mt-1">
+                  Anda masuk sebagai Administrator Utama sistem KasKita
+                </p>
+              </div>
+
+              <!-- Features Info for Super Admin -->
+              <div
+                class="bg-indigo-50/50 border border-indigo-100/60 p-5 rounded-2xl space-y-4"
               >
-                Informasi Sistem Global
-              </h3>
-              <p class="text-xs text-slate-500 mt-1">
-                Anda masuk sebagai Administrator Utama sistem KasKita
-              </p>
-            </div>
+                <div class="flex items-start gap-3">
+                  <div
+                    class="h-8 w-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 mt-0.5"
+                  >
+                    <i class="pi pi-shield text-xs"></i>
+                  </div>
+                  <div>
+                    <h4 class="text-xs font-bold text-slate-900">
+                      Hak Akses Penuh Sistem
+                    </h4>
+                    <p class="text-[10px] text-slate-500 mt-0.5">
+                      Sebagai Super Admin, Anda berwenang mengelola pendaftaran
+                      seluruh Komunitas (Tenant), registrasi Pengurus (Users),
+                      serta mengatur pemetaan RBAC (Role-Based Access Control)
+                      lintas wilayah harian.
+                    </p>
+                  </div>
+                </div>
 
-            <!-- Features Info for Super Admin -->
-            <div
-              class="bg-indigo-50/50 border border-indigo-100/60 p-5 rounded-2xl space-y-4"
-            >
-              <div class="flex items-start gap-3">
-                <div
-                  class="h-8 w-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 mt-0.5"
-                >
-                  <i class="pi pi-shield text-xs"></i>
-                </div>
-                <div>
-                  <h4 class="text-xs font-bold text-slate-900">
-                    Hak Akses Penuh Sistem
-                  </h4>
-                  <p class="text-[10px] text-slate-500 mt-0.5">
-                    Sebagai Super Admin, Anda berwenang mengelola pendaftaran
-                    seluruh Komunitas (Tenant), registrasi Pengurus (Users),
-                    serta mengatur pemetaan RBAC (Role-Based Access Control)
-                    lintas wilayah harian.
-                  </p>
-                </div>
-              </div>
-
-              <div class="flex items-start gap-3">
-                <div
-                  class="h-8 w-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 mt-0.5"
-                >
-                  <i class="pi pi-history text-xs"></i>
-                </div>
-                <div>
-                  <h4 class="text-xs font-bold text-slate-900">
-                    Pemantauan Audit Trail
-                  </h4>
-                  <p class="text-[10px] text-slate-500 mt-0.5">
-                    Anda dapat memantau setiap log aktivitas penting (seperti
-                    pendaftaran tenant baru, modifikasi RBAC, login pengguna)
-                    melalui portal Log Audit secara global.
-                  </p>
+                <div class="flex items-start gap-3">
+                  <div
+                    class="h-8 w-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0 mt-0.5"
+                  >
+                    <i class="pi pi-history text-xs"></i>
+                  </div>
+                  <div>
+                    <h4 class="text-xs font-bold text-slate-900">
+                      Pemantauan Audit Trail
+                    </h4>
+                    <p class="text-[10px] text-slate-500 mt-0.5">
+                      Anda dapat memantau setiap log aktivitas penting (seperti
+                      pendaftaran tenant baru, modifikasi RBAC, login pengguna)
+                      melalui portal Log Audit secara global.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </template>
-      </Card>
+          </template>
+        </Card>
+      </div>
     </div>
   </TemplateList>
 </template>
