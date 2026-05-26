@@ -33,6 +33,7 @@ interface Role {
 
 const roles = ref<Role[]>([])
 const permissions = ref<Permission[]>([])
+const first = ref(0)
 const selectedRole = ref<Role | null>(null)
 const selectedPermissionIds = ref<string[]>([])
 const searchQuery = ref('')
@@ -284,6 +285,7 @@ const getRoleBadgeSeverity = (roleName: string) => {
         <template #content>
           <DataTable
             v-model:selection="selectedRole"
+            v-model:first="first"
             :value="roles"
             :loading="loading"
             class="w-full mt-2"
@@ -297,6 +299,16 @@ const getRoleBadgeSeverity = (roleName: string) => {
                 Tidak ada peran terdaftar.
               </div>
             </template>
+
+            <!-- No. Column -->
+            <Column
+              header="No."
+              class="w-12 text-center text-xs font-semibold text-slate-500"
+            >
+              <template #body="slotProps">
+                {{ first + slotProps.index + 1 }}
+              </template>
+            </Column>
 
             <Column field="name" header="Nama Peran">
               <template #body="{ data }">

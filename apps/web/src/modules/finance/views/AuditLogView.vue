@@ -44,6 +44,12 @@ const resetFilters = () => {
   loadLogs()
 }
 
+const onPageChange = (event: any) => {
+  first.value = event.first
+  rowsPerPage.value = event.rows
+  loadLogs()
+}
+
 // --- Formatting Helpers ---
 
 const formatDate = (dateStr: string) => {
@@ -246,13 +252,27 @@ const actionOptions = computed(() => {
 
     <DataTable
       v-else
+      v-model:first="first"
       :value="auditStore.logs"
-      class="w-full shadow-sm rounded-lg overflow-hidden"
+      :lazy="true"
       :paginator="true"
-      :rows="10"
+      :rows="rowsPerPage"
+      :total-records="auditStore.total"
+      class="w-full shadow-sm rounded-lg overflow-hidden"
       paginator-template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
       :rows-per-page-options="[5, 10, 20, 50]"
+      @page="onPageChange"
     >
+      <!-- No. Column -->
+      <Column
+        header="No."
+        class="!border-slate-100 !p-3 w-12 text-center text-xs font-semibold text-slate-500"
+      >
+        <template #body="slotProps">
+          {{ first + slotProps.index + 1 }}
+        </template>
+      </Column>
+
       <!-- Timestamp -->
       <Column header="Waktu" style="width: 12rem">
         <template #body="{ data }">

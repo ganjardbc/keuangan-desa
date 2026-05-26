@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useFinanceStore } from '../stores/finance'
 import { useAuthStore } from '../../auth/stores/auth'
 import DataTable from 'primevue/datatable'
@@ -8,6 +9,7 @@ import Button from 'primevue/button'
 
 const financeStore = useFinanceStore()
 const authStore = useAuthStore()
+const first = ref(0)
 
 const emit = defineEmits(['edit', 'delete'])
 
@@ -22,6 +24,7 @@ const formatCurrency = (val: number) => {
 
 <template>
   <DataTable
+    v-model:first="first"
     :value="financeStore.transactions"
     responsive-layout="scroll"
     class="w-full shadow-sm rounded-lg overflow-hidden"
@@ -30,6 +33,16 @@ const formatCurrency = (val: number) => {
     paginator-template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
     :rows-per-page-options="[5, 10, 20, 50]"
   >
+    <!-- No. Column -->
+    <Column
+      header="No."
+      class="!border-slate-100 !p-3 w-12 text-center text-xs font-semibold text-slate-500"
+    >
+      <template #body="slotProps">
+        {{ first + slotProps.index + 1 }}
+      </template>
+    </Column>
+
     <Column field="title" header="Transaksi" class="!border-slate-100">
       <template #body="slotProps">
         <div class="flex items-center gap-3">

@@ -21,6 +21,7 @@ const authStore = useAuthStore()
 const selectedYear = ref(new Date().getFullYear())
 const years = [2024, 2025, 2026, 2027, 2028]
 const searchQuery = ref('')
+const first = ref(0)
 
 // Unified Dialog State
 const isPaymentDialogOpen = ref(false)
@@ -330,6 +331,7 @@ const getTooltipText = (warga: any, monthVal: number) => {
 
     <!-- Matrix View Card -->
     <DataTable
+      v-model:first="first"
       :value="filteredRekapList"
       responsive-layout="scroll"
       class="w-full shadow-sm rounded-lg overflow-hidden"
@@ -338,6 +340,16 @@ const getTooltipText = (warga: any, monthVal: number) => {
       paginator-template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
       :rows-per-page-options="[5, 10, 20, 50]"
     >
+      <!-- No. Column -->
+      <Column
+        header="No."
+        class="!border-slate-100 !p-3 w-12 text-center text-xs font-semibold text-slate-500"
+      >
+        <template #body="slotProps">
+          {{ first + slotProps.index + 1 }}
+        </template>
+      </Column>
+
       <!-- Warga Column -->
       <Column
         field="name"

@@ -18,6 +18,7 @@ const submitLoading = ref(false)
 const isDialogOpen = ref(false)
 const editData = ref<any>(null)
 const errorMsg = ref('')
+const first = ref(0)
 
 // Form states
 const name = ref('')
@@ -141,6 +142,7 @@ const getRoleSeverity = (roleName: string) => {
 
     <!-- User Table -->
     <DataTable
+      v-model:first="first"
       :value="users"
       :loading="loading"
       responsive-layout="scroll"
@@ -150,6 +152,16 @@ const getRoleSeverity = (roleName: string) => {
       paginator-template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
       :rows-per-page-options="[5, 10, 20, 50]"
     >
+      <!-- No. Column -->
+      <Column
+        header="No."
+        class="!border-slate-100 !p-3 w-12 text-center text-xs font-semibold text-slate-500"
+      >
+        <template #body="slotProps">
+          {{ first + slotProps.index + 1 }}
+        </template>
+      </Column>
+
       <Column field="name" header="Nama Pengguna" class="!border-slate-100">
         <template #body="slotProps">
           <div>

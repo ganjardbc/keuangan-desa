@@ -22,6 +22,7 @@ const isWargaDialogOpen = ref(false)
 const isIuranDialogOpen = ref(false)
 const isEditing = ref(false)
 const currentWargaId = ref<string | null>(null)
+const first = ref(0)
 
 // Warga Form State
 const name = ref('')
@@ -201,6 +202,7 @@ const formatCurrency = (val: number) => {
 
     <!-- Residents List Table -->
     <DataTable
+      v-model:first="first"
       :value="wargaStore.wargaList"
       responsive-layout="scroll"
       class="w-full shadow-sm rounded-lg overflow-hidden"
@@ -209,6 +211,16 @@ const formatCurrency = (val: number) => {
       paginator-template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
       :rows-per-page-options="[5, 10, 20, 50]"
     >
+      <!-- No. Column -->
+      <Column
+        header="No."
+        class="!border-slate-100 !p-3 w-12 text-center text-xs font-semibold text-slate-500"
+      >
+        <template #body="slotProps">
+          {{ first + slotProps.index + 1 }}
+        </template>
+      </Column>
+
       <Column field="name" header="Nama Warga" class="!border-slate-100">
         <template #body="slotProps">
           <div>

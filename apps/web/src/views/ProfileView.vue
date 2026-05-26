@@ -53,10 +53,14 @@ const copyToClipboard = async (text: string) => {
 
           <!-- User Basic Info -->
           <div class="space-y-1 flex flex-col items-center">
-            <h2 class="text-lg font-bold text-slate-900 tracking-tight text-center">
+            <h2
+              class="text-lg font-bold text-slate-900 tracking-tight text-center"
+            >
               {{ user?.name }}
             </h2>
-            <p class="text-xs text-slate-500 font-mono text-center">{{ user?.email }}</p>
+            <p class="text-xs text-slate-500 font-mono text-center">
+              {{ user?.email }}
+            </p>
             <div class="pt-2">
               <Tag
                 :value="user?.role"
@@ -100,9 +104,7 @@ const copyToClipboard = async (text: string) => {
 
       <!-- Right Column: Tenant Info -->
       <div class="w-full">
-        <Card
-          v-if="!isSuperAdmin && user?.tenant"
-        >
+        <Card v-if="!isSuperAdmin && user?.tenant">
           <template #content>
             <div class="space-y-6">
               <div>
@@ -155,8 +157,8 @@ const copyToClipboard = async (text: string) => {
                       Kode Gabung Komunitas
                     </p>
                     <p class="text-[10px] text-slate-500 mt-0.5">
-                      Berikan kode ini kepada warga baru agar dapat mendaftar dan
-                      bergabung ke wilayah ini
+                      Berikan kode ini kepada warga baru agar dapat mendaftar
+                      dan bergabung ke wilayah ini
                     </p>
                   </div>
                   <div class="flex items-center gap-2">

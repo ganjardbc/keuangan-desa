@@ -24,6 +24,7 @@ const isProjectDialogOpen = ref(false)
 const isDetailsDialogOpen = ref(false)
 const isEditing = ref(false)
 const currentId = ref<string | null>(null)
+const first = ref(0)
 
 // Confirm Delete State
 const isConfirmDeleteOpen = ref(false)
@@ -190,10 +191,7 @@ const formatDate = (dateVal?: string) => {
 
     <!-- Project List Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <Card
-        v-for="project in filteredProjects"
-        :key="project.id"
-      >
+      <Card v-for="project in filteredProjects" :key="project.id">
         <template #content>
           <!-- Status Tag & Action Row -->
           <div class="flex items-center justify-between">
@@ -203,10 +201,7 @@ const formatDate = (dateVal?: string) => {
               class="text-[9px] font-bold"
             />
 
-            <div
-              class="flex gap-1.5"
-              @click.stop
-            >
+            <div class="flex gap-1.5" @click.stop>
               <Button
                 icon="pi pi-eye"
                 severity="secondary"
@@ -472,12 +467,23 @@ const formatDate = (dateVal?: string) => {
         </p>
 
         <DataTable
+          v-model:first="first"
           :value="projectStore.currentProject.transactions"
           responsive-layout="scroll"
           class="w-full text-left"
           table-style="min-width: 30rem"
           empty-message="Belum ada transaksi pengeluaran terikat ke proyek ini."
         >
+          <!-- No. Column -->
+          <Column
+            header="No."
+            class="!border-slate-100 !p-3 w-12 text-center text-xs font-semibold text-slate-500"
+          >
+            <template #body="slotProps">
+              {{ first + slotProps.index + 1 }}
+            </template>
+          </Column>
+
           <Column
             field="title"
             header="Transaksi"
