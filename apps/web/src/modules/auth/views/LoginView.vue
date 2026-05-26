@@ -173,7 +173,7 @@ const fillMockData = (mockEmail: string, mockPass: string) => {
               class="w-full"
             />
 
-            <div class="text-center pt-2">
+            <div class="text-center">
               <router-link
                 to="/register"
                 class="text-xs text-violet-600 hover:underline font-semibold"

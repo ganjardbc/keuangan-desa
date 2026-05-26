@@ -20,8 +20,8 @@ const newTenantName = ref('')
 const newTenantAddress = ref('')
 
 const typeOptions = ref([
-  { label: 'Buat Komunitas Baru', value: true },
-  { label: 'Gabung Komunitas', value: false },
+  { label: 'Buat Tenant Baru', value: true },
+  { label: 'Gabung Tenant', value: false },
 ])
 
 const handleRegister = async () => {
@@ -157,7 +157,7 @@ const handleRegister = async () => {
               </div>
             </div>
 
-            <!-- Conditional Section: Buat Komunitas Baru -->
+            <!-- Conditional Section: Buat Tenant Baru -->
             <div
               v-if="isNewTenant"
               class="space-y-4 pt-2 border-t border-slate-100"
@@ -165,14 +165,14 @@ const handleRegister = async () => {
               <p
                 class="text-xs font-bold text-violet-600 uppercase tracking-wider"
               >
-                Informasi Komunitas Baru
+                Informasi Tenant Baru
               </p>
 
-              <!-- Nama Komunitas -->
+              <!-- Nama Tenant -->
               <div class="flex flex-col gap-2">
                 <label
                   class="text-xs font-semibold text-slate-500 uppercase tracking-wider"
-                  >Nama RT/RW/Desa/Cluster</label
+                  >Nama RT/RW/Desa/Tenant</label
                 >
                 <InputText
                   v-model="newTenantName"
@@ -196,19 +196,19 @@ const handleRegister = async () => {
               </div>
             </div>
 
-            <!-- Conditional Section: Gabung Komunitas -->
+            <!-- Conditional Section: Gabung Tenant -->
             <div v-else class="space-y-4 pt-2 border-t border-slate-100">
               <p
                 class="text-xs font-bold text-indigo-600 uppercase tracking-wider"
               >
-                Gabung Komunitas Terdaftar
+                Gabung Tenant Terdaftar
               </p>
 
               <!-- Kode Tenant -->
               <div class="flex flex-col gap-2">
                 <label
                   class="text-xs font-semibold text-slate-500 uppercase tracking-wider"
-                  >Kode Tenant / RT / Desa</label
+                  >Kode Tenant / RW / Desa</label
                 >
                 <InputText
                   v-model="tenantCode"
@@ -217,7 +217,7 @@ const handleRegister = async () => {
                   required
                 />
                 <span class="text-[10px] text-slate-400"
-                  >Mintalah Kode Tenant ini pada Bendahara atau Pengurus RT
+                  >Mintalah Kode Tenant ini pada Bendahara atau Pengurus RW
                   Anda.</span
                 >
               </div>
@@ -240,7 +240,7 @@ const handleRegister = async () => {
             />
 
             <!-- Back to Login Link -->
-            <div class="text-center pt-2">
+            <div class="text-center">
               <router-link
                 to="/login"
                 class="text-xs text-violet-600 hover:underline font-semibold"
