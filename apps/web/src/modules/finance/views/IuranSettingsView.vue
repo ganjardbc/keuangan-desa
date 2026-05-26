@@ -140,7 +140,6 @@ const formatCurrency = (val: number) => {
             <Button
               icon="pi pi-trash"
               severity="danger"
-              outlined
               size="small"
               @click="triggerDelete(item.id)"
             />
