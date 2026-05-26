@@ -51,7 +51,7 @@ onMounted(() => {
               <h3
                 class="text-3xl font-extrabold text-slate-900 mt-2 tracking-tight"
               >
-                {{ tenantsCount }} Desa / RT
+                {{ tenantsCount }} Desa / Tenant
               </h3>
             </div>
             <div

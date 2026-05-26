@@ -256,7 +256,7 @@ const getRoleBadgeSeverity = (roleName: string) => {
       <span>{{ errorMsg }}</span>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-6 items-start">
+    <div class="grid grid-cols-1 xl:grid-cols-[1fr_1.3fr] gap-6 items-start">
       <!-- Left Column: Role List -->
       <Card>
         <template #title>

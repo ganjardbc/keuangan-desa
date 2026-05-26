@@ -156,7 +156,7 @@ const actionOptions = computed(() => {
         option-label="label"
         option-value="value"
         fluid
-        class="flex-1"
+        class="flex-1 w-full! lg:w-60!"
         placeholder="Select"
         @change="onFilterChange"
       />
