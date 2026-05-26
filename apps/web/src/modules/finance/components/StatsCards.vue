@@ -19,10 +19,10 @@ const formatCurrency = (val: number) => {
     <Card>
       <template #content>
         <div class="flex items-center justify-between">
-          <span class="text-sm font-medium text-slate-600"
+          <span class="flex-1 text-sm font-medium text-slate-600"
             >Total Saldo Kas</span
           >
-          <span class="p-2 rounded-lg bg-violet-50 text-violet-600">
+          <span class="px-3 py-2 rounded-lg bg-violet-50 text-violet-600">
             <i class="pi pi-briefcase text-lg"></i>
           </span>
         </div>
@@ -39,10 +39,10 @@ const formatCurrency = (val: number) => {
     <Card>
       <template #content>
         <div class="flex items-center justify-between">
-          <span class="text-sm font-medium text-slate-600"
+          <span class="flex-1 text-sm font-medium text-slate-600"
             >Total Pemasukan</span
           >
-          <span class="p-2 rounded-lg bg-emerald-50 text-emerald-600">
+          <span class="px-3 py-2 rounded-lg bg-emerald-50 text-emerald-600">
             <i class="pi pi-arrow-up text-lg"></i>
           </span>
         </div>
@@ -59,10 +59,10 @@ const formatCurrency = (val: number) => {
     <Card>
       <template #content>
         <div class="flex items-center justify-between">
-          <span class="text-sm font-medium text-slate-600"
+          <span class="flex-1 text-sm font-medium text-slate-600"
             >Total Pengeluaran</span
           >
-          <span class="p-2 rounded-lg bg-rose-50 text-rose-600">
+          <span class="px-3 py-2 rounded-lg bg-rose-50 text-rose-600">
             <i class="pi pi-arrow-down text-lg"></i>
           </span>
         </div>

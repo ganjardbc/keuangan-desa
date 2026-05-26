@@ -307,7 +307,7 @@ const filteredMenuItems = computed(() => {
 
 /* Header */
 .header {
-  @apply sticky top-6 z-10 bg-white p-4 rounded-xl shadow-md;
+  @apply sticky top-6 z-10 bg-white p-2 rounded-xl shadow-md;
 }
 
 /* Topbar */
