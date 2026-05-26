@@ -193,7 +193,6 @@ const formatDate = (dateVal?: string) => {
       <Card
         v-for="project in filteredProjects"
         :key="project.id"
-        @click="openDetailsDialog(project)"
       >
         <template #content>
           <!-- Status Tag & Action Row -->
@@ -205,17 +204,24 @@ const formatDate = (dateVal?: string) => {
             />
 
             <div
-              v-if="authStore.hasPermission('transaction:create')"
               class="flex gap-1.5"
               @click.stop
             >
               <Button
+                icon="pi pi-eye"
+                severity="secondary"
+                size="small"
+                @click="openDetailsDialog(project)"
+              />
+              <Button
+                v-if="authStore.hasPermission('transaction:create')"
                 icon="pi pi-pencil"
                 severity="secondary"
                 size="small"
                 @click="openEditDialog(project)"
               />
               <Button
+                v-if="authStore.hasPermission('transaction:create')"
                 icon="pi pi-trash"
                 severity="danger"
                 size="small"
