@@ -72,8 +72,8 @@ const handleSave = async () => {
 
 <template>
   <TemplateList
-    title="Anggaran Kegiatan & Proyek"
-    description="Kelola rencana anggaran biaya (RAB) dan serapan dana aktual proyek desa"
+    title="Pengaturan Kuitansi & WhatsApp"
+    description="Kustomisasi template pesan WhatsApp kuitansi pembayaran iuran warga"
   >
     <!-- Alert Message -->
     <div v-if="message">

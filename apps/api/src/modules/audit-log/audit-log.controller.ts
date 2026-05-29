@@ -28,9 +28,13 @@ export class AuditLogController {
     @Query('limit') limit?: string,
     @Query('action') action?: string,
     @Query('userId') userId?: string,
+    @Query('tenantId') tenantIdQuery?: string,
   ) {
+    const isSuperAdmin = req.user.role === 'SUPER_ADMIN';
+    const tenantId = isSuperAdmin ? (tenantIdQuery || undefined) : req.user.tenantId;
+
     return this.auditLogService.findAll(
-      req.user.tenantId,
+      tenantId,
       page ? parseInt(page, 10) : 1,
       limit ? parseInt(limit, 10) : 20,
       action || undefined,
@@ -45,7 +49,12 @@ export class AuditLogController {
    */
   @Get('action-types')
   @RequirePermission('transaction:read')
-  async getActionTypes(@Request() req: any) {
-    return this.auditLogService.getActionTypes(req.user.tenantId);
+  async getActionTypes(
+    @Request() req: any,
+    @Query('tenantId') tenantIdQuery?: string,
+  ) {
+    const isSuperAdmin = req.user.role === 'SUPER_ADMIN';
+    const tenantId = isSuperAdmin ? (tenantIdQuery || undefined) : req.user.tenantId;
+    return this.auditLogService.getActionTypes(tenantId);
   }
 }

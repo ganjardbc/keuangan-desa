@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useAuditStore } from '../stores/audit'
+import { useAuthStore } from '../../../modules/auth/stores/auth'
+import api from '../../../lib/axios'
 import TemplateList from '../../../components/TemplateList.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -9,10 +11,13 @@ import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 
 const auditStore = useAuditStore()
+const authStore = useAuthStore()
 
 // Filter state
 const selectedAction = ref<string>('')
-const rowsPerPage = ref(20)
+const selectedTenant = ref<string>('')
+const tenants = ref<any[]>([])
+const rowsPerPage = ref(10)
 const first = ref(0)
 
 // Computed current page (1-indexed)
@@ -20,16 +25,36 @@ const currentPage = computed(
   () => Math.floor(first.value / rowsPerPage.value) + 1,
 )
 
+// Check if active user is superadmin
+const isSuperAdmin = computed(() => authStore.userRole === 'SUPER_ADMIN')
+
 const loadLogs = async () => {
   await auditStore.fetchAuditLogs({
     page: currentPage.value,
     limit: rowsPerPage.value,
     action: selectedAction.value || undefined,
+    tenantId: selectedTenant.value || undefined,
   })
 }
 
+const fetchTenants = async () => {
+  if (!isSuperAdmin.value) return
+  try {
+    const res = await api.get('/admin/tenants')
+    tenants.value = res.data
+    // Set default selected tenant to current user's tenant if available, or first tenant
+    if (tenants.value.length > 0) {
+      selectedTenant.value = authStore.user?.tenant?.id || tenants.value[0].id
+    }
+  } catch (err) {
+    console.error('Gagal memuat tenant:', err)
+  }
+}
+
 onMounted(async () => {
-  await auditStore.fetchActionTypes()
+  await fetchTenants()
+  // Fetch action types scoped to selected tenant
+  await auditStore.fetchActionTypes(selectedTenant.value || undefined)
   await loadLogs()
 })
 
@@ -38,8 +63,29 @@ const onFilterChange = () => {
   loadLogs()
 }
 
+const onTenantChange = async () => {
+  first.value = 0
+  // Refresh action types filter dropdown based on chosen tenant
+  await auditStore.fetchActionTypes(selectedTenant.value || undefined)
+  // If the previously selected action filter is no longer valid, reset it
+  if (
+    selectedAction.value &&
+    !auditStore.actionTypes.includes(selectedAction.value)
+  ) {
+    selectedAction.value = ''
+  }
+  loadLogs()
+}
+
 const resetFilters = () => {
   selectedAction.value = ''
+  // Reset selected tenant to user's tenant if SUPER_ADMIN
+  if (isSuperAdmin.value) {
+    selectedTenant.value =
+      authStore.user?.tenant?.id || tenants.value[0]?.id || ''
+  } else {
+    selectedTenant.value = ''
+  }
   first.value = 0
   loadLogs()
 }
@@ -148,6 +194,17 @@ const actionOptions = computed(() => {
     })),
   ]
 })
+
+// Tenant options for dropdown list (SUPER_ADMIN only)
+const tenantOptions = computed(() => {
+  return [
+    { label: 'Semua Tenant', value: '' },
+    ...tenants.value.map((t) => ({
+      label: t.name,
+      value: t.id,
+    })),
+  ]
+})
 </script>
 
 <template>
@@ -156,23 +213,43 @@ const actionOptions = computed(() => {
     description="Rekam jejak setiap aksi penting yang dilakukan pengguna di sistem"
   >
     <template #actions>
-      <Select
-        v-model="selectedAction"
-        :options="actionOptions"
-        option-label="label"
-        option-value="value"
-        fluid
-        class="flex-1 w-full! lg:w-60!"
-        placeholder="Select"
-        @change="onFilterChange"
-      />
-      <Button
-        v-if="selectedAction"
-        icon="pi pi-times"
-        severity="secondary"
-        label="Reset"
-        @click="resetFilters"
-      />
+      <div
+        class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto"
+      >
+        <!-- Tenant Filter for SUPER_ADMIN -->
+        <Select
+          v-if="isSuperAdmin"
+          v-model="selectedTenant"
+          :options="tenantOptions"
+          option-label="label"
+          option-value="value"
+          class="flex-1 w-full lg:w-60"
+          placeholder="Pilih Tenant"
+          @change="onTenantChange"
+        />
+
+        <!-- Action Filter -->
+        <Select
+          v-model="selectedAction"
+          :options="actionOptions"
+          option-label="label"
+          option-value="value"
+          class="flex-1 w-full lg:w-60"
+          placeholder="Pilih Aksi"
+          @change="onFilterChange"
+        />
+        <Button
+          v-if="
+            selectedAction ||
+            (isSuperAdmin &&
+              selectedTenant !== (authStore.user?.tenant?.id || ''))
+          "
+          icon="pi pi-times"
+          severity="secondary"
+          label="Reset"
+          @click="resetFilters"
+        />
+      </div>
     </template>
 
     <!-- Stats Row -->
@@ -260,7 +337,6 @@ const actionOptions = computed(() => {
       :total-records="auditStore.total"
       class="w-full shadow-sm rounded-lg overflow-hidden"
       paginator-template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
-      :rows-per-page-options="[5, 10, 20, 50]"
       @page="onPageChange"
     >
       <!-- No. Column -->
@@ -292,6 +368,19 @@ const actionOptions = computed(() => {
               {{ data.user.name }}
             </p>
             <p class="text-[10px] text-slate-500">{{ data.user.email }}</p>
+          </div>
+        </template>
+      </Column>
+
+      <!-- Tenant Column (SUPER_ADMIN only) -->
+      <Column v-if="isSuperAdmin" header="Tenant" style="width: 12rem">
+        <template #body="{ data }">
+          <div>
+            <span
+              class="text-xs font-bold text-slate-700 bg-slate-100 border border-slate-200/65 px-2.5 py-0.5 rounded-md truncate max-w-[10rem] block"
+            >
+              {{ data.user.tenant?.name || 'Super Admin' }}
+            </span>
           </div>
         </template>
       </Column>

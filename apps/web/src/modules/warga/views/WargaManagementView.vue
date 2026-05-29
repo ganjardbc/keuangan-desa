@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useWargaStore, type Warga } from '../stores/warga'
 import { useJenisIuranStore } from '../../../modules/finance/stores/jenis-iuran'
 import { useAuthStore } from '../../../modules/auth/stores/auth'
 import TemplateList from '../../../components/TemplateList.vue'
 import Button from 'primevue/button'
-import DataTable from 'primevue/datatable'
-import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import InputNumber from 'primevue/inputnumber'
+import InputGroup from 'primevue/inputgroup'
+import InputGroupAddon from 'primevue/inputgroupaddon'
+import Paginator from 'primevue/paginator'
 
 const wargaStore = useWargaStore()
 const jenisIuranStore = useJenisIuranStore()
@@ -23,6 +24,8 @@ const isIuranDialogOpen = ref(false)
 const isEditing = ref(false)
 const currentWargaId = ref<string | null>(null)
 const first = ref(0)
+const rows = ref(9)
+const searchQuery = ref('')
 
 // Warga Form State
 const name = ref('')
@@ -71,6 +74,28 @@ const getStatusConfig = (status: string) => {
 const mappedIuran = ref<any[]>([])
 const selectedJenisIuranId = ref('')
 const customAmount = ref<number | null>(null)
+
+watch(searchQuery, () => {
+  first.value = 0
+})
+
+const filteredWargaList = computed(() => {
+  if (!searchQuery.value) {
+    return wargaStore.wargaList
+  }
+  const q = searchQuery.value.toLowerCase()
+  return wargaStore.wargaList.filter(
+    (w) =>
+      w.name.toLowerCase().includes(q) ||
+      w.houseNumber.toLowerCase().includes(q),
+  )
+})
+
+const paginatedWargaList = computed(() => {
+  const start = first.value
+  const end = first.value + rows.value
+  return filteredWargaList.value.slice(start, end)
+})
 
 onMounted(() => {
   wargaStore.fetchWarga()
@@ -192,131 +217,231 @@ const formatCurrency = (val: number) => {
     description="Atur profil penduduk, nomor rumah, dan pemetaan iuran bulanan"
   >
     <template #actions>
-      <Button
-        v-if="authStore.hasPermission('warga:write')"
-        label="Tambah Warga"
-        icon="pi pi-plus"
-        @click="openAddWargaDialog"
-      />
+      <div
+        class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto"
+      >
+        <div class="relative flex items-center">
+          <InputGroup>
+            <InputText
+              v-model="searchQuery"
+              fluid
+              placeholder="Cari warga / no. rumah..."
+            />
+            <InputGroupAddon>
+              <i class="pi pi-search text-slate-400" />
+            </InputGroupAddon>
+          </InputGroup>
+        </div>
+        <Button
+          v-if="authStore.hasPermission('warga:write')"
+          label="Tambah Warga"
+          icon="pi pi-plus"
+          @click="openAddWargaDialog"
+        />
+      </div>
     </template>
 
-    <!-- Residents List Table -->
-    <DataTable
-      v-model:first="first"
-      :value="wargaStore.wargaList"
-      responsive-layout="scroll"
-      class="w-full shadow-sm rounded-lg overflow-hidden"
-      :paginator="true"
-      :rows="10"
-      paginator-template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
-      :rows-per-page-options="[5, 10, 20, 50]"
+    <!-- Skeleton Cards while loading -->
+    <div
+      v-if="wargaStore.loading"
+      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
     >
-      <!-- No. Column -->
-      <Column
-        header="No."
-        class="!border-slate-100 !p-3 w-12 text-center text-xs font-semibold text-slate-500"
+      <div
+        v-for="i in 6"
+        :key="i"
+        class="bg-white border border-slate-100 p-5 rounded-2xl animate-pulse space-y-4 shadow-sm"
       >
-        <template #body="slotProps">
-          {{ first + slotProps.index + 1 }}
-        </template>
-      </Column>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3 w-2/3">
+            <div class="h-10 w-10 rounded-full bg-slate-200"></div>
+            <div class="flex-1 space-y-2">
+              <div class="h-4 bg-slate-200 rounded w-full"></div>
+              <div class="h-3 bg-slate-200 rounded w-1/2"></div>
+            </div>
+          </div>
+          <div class="h-6 bg-slate-200 rounded-full w-16"></div>
+        </div>
+        <div class="space-y-2 pt-2">
+          <div class="h-3 bg-slate-200 rounded w-1/4"></div>
+          <div class="h-6 bg-slate-200 rounded-lg w-full"></div>
+        </div>
+        <div class="space-y-2 pt-2">
+          <div class="h-3 bg-slate-200 rounded w-1/3"></div>
+          <div class="flex gap-2">
+            <div class="h-5 bg-slate-200 rounded w-16"></div>
+            <div class="h-5 bg-slate-200 rounded w-20"></div>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-4 border-t border-slate-50">
+          <div class="h-8 w-8 bg-slate-200 rounded-xl"></div>
+          <div class="h-8 w-8 bg-slate-200 rounded-xl"></div>
+          <div class="h-8 w-8 bg-slate-200 rounded-xl"></div>
+        </div>
+      </div>
+    </div>
 
-      <Column field="name" header="Nama Warga" class="!border-slate-100">
-        <template #body="slotProps">
+    <!-- Warga Cards Container -->
+    <div v-else-if="filteredWargaList.length > 0" class="space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div
+          v-for="warga in paginatedWargaList"
+          :key="warga.id"
+          class="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-slate-200 transition-all duration-300 flex flex-col justify-between"
+        >
           <div>
-            <p class="text-sm font-semibold text-slate-900">
-              {{ slotProps.data.name }}
-            </p>
-            <p class="text-xs text-slate-500">
-              Telp: {{ slotProps.data.phoneNumber || '-' }}
-            </p>
-          </div>
-        </template>
-      </Column>
+            <!-- Header: Initials + Name + Status Tag -->
+            <div class="flex items-start justify-between gap-3 mb-4">
+              <div class="flex items-center gap-3 min-w-0">
+                <!-- Avatar Initials -->
+                <div
+                  class="h-10 w-10 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-sm select-none flex-shrink-0"
+                >
+                  {{ warga.name.charAt(0).toUpperCase() }}
+                </div>
+                <div class="min-w-0">
+                  <h4
+                    class="text-sm font-bold text-slate-800 truncate"
+                    :title="warga.name"
+                  >
+                    {{ warga.name }}
+                  </h4>
+                  <p
+                    v-if="warga.phoneNumber"
+                    class="text-[10px] text-slate-400 flex items-center mt-0.5"
+                  >
+                    <i class="pi pi-phone text-[9px] mr-1"></i>
+                    {{ warga.phoneNumber }}
+                  </p>
+                  <p v-else class="text-[10px] text-slate-400 italic mt-0.5">
+                    Tidak ada nomor telepon
+                  </p>
+                </div>
+              </div>
 
-      <Column field="houseNumber" header="No. Rumah" class="!border-slate-100">
-        <template #body="slotProps">
-          <span
-            class="font-mono text-xs bg-slate-50 border border-slate-200 px-2 py-1 rounded text-slate-700"
-          >
-            {{ slotProps.data.houseNumber }}
-          </span>
-        </template>
-      </Column>
+              <!-- Status Tag -->
+              <div class="flex-shrink-0">
+                <Tag
+                  :value="getStatusConfig(warga.status).label"
+                  :icon="`pi ${getStatusConfig(warga.status).icon}`"
+                  :class="[
+                    'border text-[9px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 shadow-2xs',
+                    getStatusConfig(warga.status).bg,
+                    getStatusConfig(warga.status).text,
+                  ]"
+                />
+              </div>
+            </div>
 
-      <Column field="status" header="Status" class="!border-slate-100">
-        <template #body="slotProps">
-          <Tag
-            :value="getStatusConfig(slotProps.data.status).label"
-            :icon="`pi ${getStatusConfig(slotProps.data.status).icon}`"
-            :class="[
-              'border text-[10px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 shadow-xs',
-              getStatusConfig(slotProps.data.status).bg,
-              getStatusConfig(slotProps.data.status).text,
-            ]"
-          />
-        </template>
-      </Column>
-
-      <Column header="Iuran Diikuti" class="!border-slate-100 max-w-[20rem]">
-        <template #body="slotProps">
-          <div class="flex flex-wrap gap-1">
-            <Tag
-              v-for="item in slotProps.data.iuranBulanan"
-              :key="item.id"
-              :value="`${item.jenisIuran.name} (${formatCurrency(item.customAmount ?? item.jenisIuran.defaultAmount)})`"
-              severity="secondary"
-              class="!bg-slate-100 !text-slate-600 text-[9px]"
-            />
-            <span
-              v-if="
-                !slotProps.data.iuranBulanan ||
-                slotProps.data.iuranBulanan.length === 0
-              "
-              class="text-xs text-slate-400"
+            <!-- House Details -->
+            <div
+              class="bg-slate-50 border border-slate-100/60 rounded-xl px-3 py-2 flex items-center justify-between mb-4"
             >
-              Belum ikut iuran
-            </span>
-          </div>
-        </template>
-      </Column>
+              <span
+                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
+                >Nomor Rumah</span
+              >
+              <span
+                class="font-mono text-xs bg-white border border-slate-200 px-2 py-0.5 rounded-md text-slate-700 shadow-3xs font-semibold"
+              >
+                {{ warga.houseNumber }}
+              </span>
+            </div>
 
-      <Column
-        v-if="authStore.hasPermission('warga:write')"
-        header="Aksi"
-        class="!border-slate-100 text-right"
-        header-class="text-right"
-      >
-        <template #body="slotProps">
-          <div class="flex items-center justify-end gap-2">
+            <!-- List of followed iurans -->
+            <div class="space-y-1.5 mb-4">
+              <p
+                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
+              >
+                Iuran Diikuti
+              </p>
+              <div class="flex flex-wrap gap-1">
+                <Tag
+                  v-for="item in warga.iuranBulanan"
+                  :key="item.id"
+                  :value="`${item.jenisIuran.name} (${formatCurrency(item.customAmount ?? item.jenisIuran.defaultAmount)})`"
+                  severity="secondary"
+                  class="!bg-slate-100 !text-slate-600 text-[9px] !font-medium"
+                />
+                <span
+                  v-if="!warga.iuranBulanan || warga.iuranBulanan.length === 0"
+                  class="text-xs text-slate-400 italic block py-0.5"
+                >
+                  Belum mengikuti iuran apapun
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions Footer (For Bendahara/Write permissions) -->
+          <div
+            v-if="authStore.hasPermission('warga:write')"
+            class="flex items-center justify-end gap-2 pt-3 mt-2 border-t border-slate-50"
+          >
             <Button
               icon="pi pi-cog"
               severity="info"
-              text
+              outlined
               size="small"
               title="Kelola Iuran Warga"
-              @click="openIuranMappingDialog(slotProps.data)"
+              @click="openIuranMappingDialog(warga)"
             />
             <Button
               icon="pi pi-pencil"
               severity="secondary"
-              text
+              outlined
               size="small"
               title="Edit Profil"
-              @click="openEditWargaDialog(slotProps.data)"
+              @click="openEditWargaDialog(warga)"
             />
             <Button
               icon="pi pi-trash"
               severity="danger"
-              text
+              outlined
               size="small"
               title="Hapus Warga"
-              @click="handleDeleteWarga(slotProps.data.id)"
+              @click="handleDeleteWarga(warga.id)"
             />
           </div>
-        </template>
-      </Column>
-    </DataTable>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <Paginator
+        v-model:first="first"
+        v-model:rows="rows"
+        :total-records="filteredWargaList.length"
+        :rows-per-page-options="[6, 9, 12, 24, 48]"
+        template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
+        class="mt-6 !bg-transparent !border-0"
+      />
+    </div>
+
+    <!-- Empty State -->
+    <div
+      v-else
+      class="flex flex-col items-center justify-center py-12 px-4 text-center bg-white border border-slate-100 rounded-2xl shadow-sm"
+    >
+      <div
+        class="h-16 w-16 rounded-full bg-slate-50 flex items-center justify-center mb-4 text-slate-400 select-none"
+      >
+        <i class="pi pi-search text-2xl"></i>
+      </div>
+      <h3 class="text-sm font-semibold text-slate-900">
+        Data warga tidak ditemukan
+      </h3>
+      <p class="text-xs text-slate-500 mt-1 max-w-xs">
+        Tidak ada warga atau nomor rumah yang cocok dengan "{{ searchQuery }}".
+        Coba cari dengan kata kunci lain.
+      </p>
+      <Button
+        v-if="searchQuery"
+        label="Reset Pencarian"
+        severity="secondary"
+        size="small"
+        class="mt-4"
+        @click="searchQuery = ''"
+      />
+    </div>
   </TemplateList>
 
   <!-- Dialog Add/Edit Warga -->

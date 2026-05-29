@@ -125,7 +125,7 @@ const submitTransaction = async () => {
 
 <template>
   <div>
-    <form class="space-y-5 px-2" @submit.prevent="submitTransaction">
+    <form class="space-y-5" @submit.prevent="submitTransaction">
       <!-- Type Tab Selector -->
       <SelectButton
         v-model="type"

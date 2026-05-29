@@ -200,13 +200,15 @@ const filteredMenuItems = computed(() => {
                     @click="isSidebarOpen = true"
                   />
                 </div>
-                <h1 class="hidden md:block text-2xl font-bold">Halo, {{ authStore.user?.name }}!</h1>
+                <h1 class="hidden md:block text-2xl font-bold">
+                  Halo, {{ authStore.user?.name }}!
+                </h1>
               </div>
 
               <div class="content-topbar-right">
                 <!-- Clickable Profile Header Block -->
                 <div
-                  class="cursor-pointer bg-white hover:bg-slate-50 border border-slate-100 hover:border-slate-200 px-2 py-1.5 rounded-full transition-all duration-200 flex items-center gap-2.5"
+                  class="cursor-pointer bg-white hover:bg-slate-50 border border-slate-100 hover:border-slate-200 px-1.5 py-1.5 rounded-full transition-all duration-200 flex items-center gap-2.5"
                   title="Lihat Profil Saya"
                   @click="router.push('/dashboard/profile')"
                 >

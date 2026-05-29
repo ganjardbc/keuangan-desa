@@ -37,6 +37,7 @@ export const useAuditStore = defineStore('audit', () => {
       limit?: number
       action?: string
       userId?: string
+      tenantId?: string
     } = {},
   ) {
     loading.value = true
@@ -46,6 +47,7 @@ export const useAuditStore = defineStore('audit', () => {
       if (params.limit) query.set('limit', String(params.limit))
       if (params.action) query.set('action', params.action)
       if (params.userId) query.set('userId', params.userId)
+      if (params.tenantId) query.set('tenantId', params.tenantId)
 
       const res = await api.get<AuditLogPaginatedResult>(
         `/audit-log?${query.toString()}`,
@@ -61,9 +63,10 @@ export const useAuditStore = defineStore('audit', () => {
     }
   }
 
-  async function fetchActionTypes() {
+  async function fetchActionTypes(tenantId?: string) {
     try {
-      const res = await api.get<string[]>('/audit-log/action-types')
+      const query = tenantId ? `?tenantId=${tenantId}` : ''
+      const res = await api.get<string[]>(`/audit-log/action-types${query}`)
       actionTypes.value = res.data
     } catch (err) {
       console.error('Gagal memuat action types:', err)

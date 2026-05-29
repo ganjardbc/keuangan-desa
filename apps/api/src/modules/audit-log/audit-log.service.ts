@@ -40,8 +40,8 @@ export class AuditLogService {
    * @param action - Optional filter by action type
    * @param userId - Optional filter by specific user ID
    */
-  async findAll(
-    tenantId: string,
+   async findAll(
+    tenantId?: string,
     page: number = 1,
     limit: number = 20,
     action?: string,
@@ -49,9 +49,10 @@ export class AuditLogService {
   ) {
     const skip = (page - 1) * limit;
 
-    const where: any = {
-      user: { tenantId },
-    };
+    const where: any = {};
+    if (tenantId) {
+      where.user = { tenantId };
+    }
 
     if (action) where.action = action;
     if (userId) where.userId = userId;
@@ -61,7 +62,14 @@ export class AuditLogService {
         where,
         include: {
           user: {
-            select: { id: true, name: true, email: true },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              tenant: {
+                select: { id: true, name: true, code: true },
+              },
+            },
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -84,9 +92,13 @@ export class AuditLogService {
    * Returns all distinct action types recorded in the audit log for a tenant.
    * Used to populate filter dropdowns on the frontend.
    */
-  async getActionTypes(tenantId: string): Promise<string[]> {
+  async getActionTypes(tenantId?: string): Promise<string[]> {
+    const where: any = {};
+    if (tenantId) {
+      where.user = { tenantId };
+    }
     const results = await this.prisma.auditLog.findMany({
-      where: { user: { tenantId } },
+      where,
       select: { action: true },
       distinct: ['action'],
       orderBy: { action: 'asc' },
