@@ -2,7 +2,6 @@
 import { computed, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../modules/auth/stores/auth'
-import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 
 const authStore = useAuthStore()
@@ -189,22 +188,25 @@ const filteredMenuItems = computed(() => {
 
       <section class="content-section">
         <main class="content-main">
-          <header class="header">
-            <div class="topbar">
-              <div class="topbar-left">
+          <header class="content-header">
+            <div class="content-topbar">
+              <div class="content-topbar-left">
                 <!-- Sidebar Toggle Button for Mobile -->
                 <div class="md:hidden">
                   <Button
                     icon="pi pi-bars"
-                    text
                     severity="secondary"
+                    rounded
                     @click="isSidebarOpen = true"
                   />
                 </div>
+                <h1 class="hidden md:block text-2xl font-bold">Halo, {{ authStore.user?.name }}!</h1>
+              </div>
 
+              <div class="content-topbar-right">
                 <!-- Clickable Profile Header Block -->
                 <div
-                  class="cursor-pointer hover:bg-slate-50 border border-slate-100 hover:border-slate-200 px-3 py-1.5 rounded-xl transition-all duration-200 flex items-center gap-2.5"
+                  class="cursor-pointer bg-white hover:bg-slate-50 border border-slate-100 hover:border-slate-200 px-2 py-1.5 rounded-full transition-all duration-200 flex items-center gap-2.5"
                   title="Lihat Profil Saya"
                   @click="router.push('/dashboard/profile')"
                 >
@@ -213,29 +215,22 @@ const filteredMenuItems = computed(() => {
                   >
                     {{ authStore.user?.name?.charAt(0).toUpperCase() || 'U' }}
                   </div>
-                  <div class="topbar-user select-none text-left">
-                    <p class="topbar-name">
+                  <div class="content-topbar-user select-none text-left">
+                    <h2 class="content-topbar-name">
                       {{ authStore.user?.name }}
-                    </p>
-                    <p class="topbar-role">
+                    </h2>
+                    <p class="content-topbar-role">
                       {{ authStore.userRole }}
                     </p>
                   </div>
                 </div>
-              </div>
-
-              <div class="topbar-right">
-                <Tag
-                  :value="authStore.userRole"
-                  severity="secondary"
-                  class="font-semibold text-xs py-1 px-3"
-                />
                 <Button
                   icon="pi pi-sign-out"
                   severity="danger"
                   text
-                  size="small"
+                  size="medium"
                   title="Keluar"
+                  rounded
                   @click="handleLogout"
                 />
               </div>
@@ -306,32 +301,32 @@ const filteredMenuItems = computed(() => {
 }
 
 /* Header */
-.header {
-  @apply sticky top-6 z-10 bg-white p-2 rounded-xl shadow-md;
+.content-header {
+  @apply relative w-full;
 }
 
 /* Topbar */
-.topbar {
+.content-topbar {
   @apply w-full flex justify-between items-center gap-4;
 }
 
-.topbar-left {
+.content-topbar-left {
   @apply flex items-center gap-3;
 }
 
-.topbar-right {
+.content-topbar-right {
   @apply flex items-center gap-3;
 }
 
-.topbar-user {
+.content-topbar-user {
   @apply hidden sm:block;
 }
 
-.topbar-name {
+.content-topbar-name {
   @apply text-sm font-semibold text-slate-900;
 }
 
-.topbar-role {
+.content-topbar-role {
   @apply text-[10px] text-slate-500 font-semibold uppercase tracking-wider;
 }
 
