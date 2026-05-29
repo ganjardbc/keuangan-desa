@@ -9,12 +9,16 @@ const props = defineProps<{
   warga: any
   month: number | null
   year: number
+  kasAccounts: any[]
   loading?: boolean
   hasWritePermission?: boolean
 }>()
 
 const emit = defineEmits<{
-  (e: 'pay', payload: { jenisIuranId: string; amountPaid: number }): void
+  (
+    e: 'pay',
+    payload: { jenisIuranId: string; amountPaid: number; kasAccountId: string },
+  ): void
   (e: 'send-wa', payload: { payment: any }): void
 }>()
 
@@ -22,6 +26,7 @@ const visible = defineModel<boolean>('visible', { default: false })
 
 const selectedIuranId = ref<string>('')
 const amountPaid = ref<number>(0)
+const selectedKasAccountId = ref<string>('')
 
 const monthsList = [
   { value: 1, name: 'Jan', nameFull: 'Januari' },
@@ -62,10 +67,12 @@ const unpaidIurans = computed(() => {
   )
 })
 
-// Initialize/reset form when warga or month changes
+// Initialize/reset form when warga, month or accounts change
 watch(
-  [() => props.warga, () => props.month],
-  () => {
+  [() => props.warga, () => props.month, () => props.kasAccounts, visible],
+  ([, , newAccounts, isOpen]) => {
+    if (!isOpen) return
+
     const unpaid = unpaidIurans.value
     if (unpaid.length > 0) {
       selectedIuranId.value = unpaid[0].jenisIuran.id
@@ -74,6 +81,10 @@ watch(
     } else {
       selectedIuranId.value = ''
       amountPaid.value = 0
+    }
+
+    if (newAccounts && newAccounts.length > 0 && !selectedKasAccountId.value) {
+      selectedKasAccountId.value = newAccounts[0].id
     }
   },
   { immediate: true },
@@ -91,10 +102,16 @@ watch(selectedIuranId, (newId) => {
 })
 
 const handlePaySubmit = () => {
-  if (!selectedIuranId.value || amountPaid.value <= 0) return
+  if (
+    !selectedIuranId.value ||
+    amountPaid.value <= 0 ||
+    !selectedKasAccountId.value
+  )
+    return
   emit('pay', {
     jenisIuranId: selectedIuranId.value,
     amountPaid: amountPaid.value,
+    kasAccountId: selectedKasAccountId.value,
   })
 }
 
@@ -288,6 +305,22 @@ const formatDate = (dateStr: string) => {
               :min="0"
               class="w-full"
               input-class="w-full !bg-white !border-slate-200 !text-slate-900 placeholder-slate-400 rounded-xl text-xs shadow-sm focus:!border-primary-500 focus:!ring-primary-500/20"
+            />
+          </div>
+
+          <!-- Account Dropdown -->
+          <div class="flex flex-col gap-1.5 sm:col-span-2">
+            <label
+              class="text-[10px] font-bold text-slate-500 uppercase tracking-wider"
+              >Akun Kas Penerima</label
+            >
+            <Select
+              v-model="selectedKasAccountId"
+              :options="kasAccounts"
+              option-value="id"
+              option-label="name"
+              placeholder="Pilih Rekening Kas"
+              class="w-full !bg-white !border-slate-200 !text-slate-900 rounded-xl text-xs shadow-sm focus:!border-primary-500 focus:!ring-primary-500/20"
             />
           </div>
         </div>

@@ -165,15 +165,20 @@ const getMonthStatus = (warga: any, monthVal: number) => {
 const openPaymentDialog = (warga: any, monthVal: number) => {
   selectedWarga.value = warga
   selectedMonth.value = monthVal
+  if (financeStore.kasAccounts.length === 0) {
+    financeStore.fetchKasAccounts()
+  }
   isPaymentDialogOpen.value = true
 }
 
 const handlePay = async ({
   jenisIuranId,
   amountPaid,
+  kasAccountId,
 }: {
   jenisIuranId: string
   amountPaid: number
+  kasAccountId: string
 }) => {
   if (!selectedWarga.value || selectedMonth.value === null) return
 
@@ -183,6 +188,7 @@ const handlePay = async ({
     month: selectedMonth.value,
     year: selectedYear.value,
     amountPaid,
+    kasAccountId,
   })
 
   if (success) {
@@ -394,7 +400,7 @@ const getTooltipText = (warga: any, monthVal: number) => {
           </InputGroupAddon>
         </InputGroup>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-col sm:flex-row items-center gap-3">
         <Select
           v-model="selectedYear"
           placeholder="Pilih Tahun"
@@ -407,6 +413,7 @@ const getTooltipText = (warga: any, monthVal: number) => {
           label="Bayar Massal"
           icon="pi pi-users"
           severity="primary"
+          fluid
           class="min-w-[170px]"
           @click="openBulkAllPaymentDialog"
         />
@@ -809,6 +816,7 @@ const getTooltipText = (warga: any, monthVal: number) => {
     :warga="selectedWarga"
     :month="selectedMonth"
     :year="selectedYear"
+    :kas-accounts="financeStore.kasAccounts"
     :loading="submitLoading"
     :has-write-permission="authStore.hasPermission('warga:write')"
     @pay="handlePay"

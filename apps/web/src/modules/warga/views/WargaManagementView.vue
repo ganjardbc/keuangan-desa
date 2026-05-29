@@ -312,7 +312,7 @@ const formatCurrency = (val: number) => {
               <div class="flex items-center gap-3 min-w-0">
                 <!-- Avatar Initials -->
                 <div
-                  class="h-10 w-10 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-sm select-none flex-shrink-0"
+                  class="h-10 w-10 rounded-full bg-primary-500 flex items-center justify-center text-white font-bold text-sm shadow-sm select-none flex-shrink-0"
                 >
                   {{ warga.name.charAt(0).toUpperCase() }}
                 </div>
