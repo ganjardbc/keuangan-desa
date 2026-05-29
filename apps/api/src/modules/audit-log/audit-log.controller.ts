@@ -31,7 +31,9 @@ export class AuditLogController {
     @Query('tenantId') tenantIdQuery?: string,
   ) {
     const isSuperAdmin = req.user.role === 'SUPER_ADMIN';
-    const tenantId = isSuperAdmin ? (tenantIdQuery || undefined) : req.user.tenantId;
+    const tenantId = isSuperAdmin
+      ? tenantIdQuery || undefined
+      : req.user.tenantId;
 
     return this.auditLogService.findAll(
       tenantId,
@@ -54,7 +56,9 @@ export class AuditLogController {
     @Query('tenantId') tenantIdQuery?: string,
   ) {
     const isSuperAdmin = req.user.role === 'SUPER_ADMIN';
-    const tenantId = isSuperAdmin ? (tenantIdQuery || undefined) : req.user.tenantId;
+    const tenantId = isSuperAdmin
+      ? tenantIdQuery || undefined
+      : req.user.tenantId;
     return this.auditLogService.getActionTypes(tenantId);
   }
 }

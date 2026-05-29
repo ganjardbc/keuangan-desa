@@ -40,7 +40,7 @@ export class AuditLogService {
    * @param action - Optional filter by action type
    * @param userId - Optional filter by specific user ID
    */
-   async findAll(
+  async findAll(
     tenantId?: string,
     page: number = 1,
     limit: number = 20,

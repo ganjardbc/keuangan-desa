@@ -18,6 +18,13 @@ import { RequirePermission } from '../auth/permissions.decorator';
 import { Audit } from '../audit-log/audit.decorator';
 import { AuditInterceptor } from '../audit-log/audit.interceptor';
 
+interface RequestWithUser {
+  user: {
+    id: string;
+    tenantId: string;
+  };
+}
+
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @UseInterceptors(AuditInterceptor)
 @Controller('warga')
@@ -26,14 +33,14 @@ export class WargaController {
 
   @Get()
   @RequirePermission('warga:read')
-  async findAll(@Request() req: any) {
+  async findAll(@Request() req: RequestWithUser) {
     return this.wargaService.findAll(req.user.tenantId);
   }
 
   @Post()
   @RequirePermission('warga:write')
   @Audit('TAMBAH_WARGA')
-  async create(@Body() body: any, @Request() req: any) {
+  async create(@Body() body: any, @Request() req: RequestWithUser) {
     return this.wargaService.create(body, req.user.tenantId);
   }
 
@@ -43,7 +50,7 @@ export class WargaController {
   async update(
     @Param('id') id: string,
     @Body() body: any,
-    @Request() req: any,
+    @Request() req: RequestWithUser,
   ) {
     return this.wargaService.update(id, body, req.user.tenantId);
   }
@@ -51,14 +58,28 @@ export class WargaController {
   @Delete(':id')
   @RequirePermission('warga:write')
   @Audit('HAPUS_WARGA')
-  async delete(@Param('id') id: string, @Request() req: any) {
+  async delete(@Param('id') id: string, @Request() req: RequestWithUser) {
     return this.wargaService.delete(id, req.user.tenantId);
   }
 
   @Patch(':id/toggle')
   @RequirePermission('warga:write')
-  async toggleStatus(@Param('id') id: string, @Request() req: any) {
+  async toggleStatus(@Param('id') id: string, @Request() req: RequestWithUser) {
     return this.wargaService.toggleStatus(id, req.user.tenantId);
+  }
+
+  @Post('pembayaran/bulk-all')
+  @RequirePermission('warga:write')
+  @Audit('CATAT_PEMBAYARAN_BULK_ALL')
+  async recordBulkAllPayment(
+    @Body() body: any,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.wargaService.recordBulkAllPayment(
+      body,
+      req.user.id,
+      req.user.tenantId,
+    );
   }
 
   @Post(':wargaId/iuran')
@@ -66,7 +87,7 @@ export class WargaController {
   async assignIuran(
     @Param('wargaId') wargaId: string,
     @Body() body: any,
-    @Request() req: any,
+    @Request() req: RequestWithUser,
   ) {
     return this.wargaService.assignIuran(wargaId, body, req.user.tenantId);
   }
@@ -76,7 +97,7 @@ export class WargaController {
   async unassignIuran(
     @Param('wargaId') wargaId: string,
     @Param('jenisIuranId') jenisIuranId: string,
-    @Request() req: any,
+    @Request() req: RequestWithUser,
   ) {
     return this.wargaService.unassignIuran(
       wargaId,
@@ -87,7 +108,10 @@ export class WargaController {
 
   @Get(':wargaId/iuran')
   @RequirePermission('warga:read')
-  async getWargaIuran(@Param('wargaId') wargaId: string, @Request() req: any) {
+  async getWargaIuran(
+    @Param('wargaId') wargaId: string,
+    @Request() req: RequestWithUser,
+  ) {
     return this.wargaService.getWargaIuran(wargaId, req.user.tenantId);
   }
 
@@ -97,7 +121,7 @@ export class WargaController {
   async recordPayment(
     @Param('wargaId') wargaId: string,
     @Body() body: any,
-    @Request() req: any,
+    @Request() req: RequestWithUser,
   ) {
     return this.wargaService.recordPayment(
       wargaId,
@@ -107,9 +131,28 @@ export class WargaController {
     );
   }
 
+  @Post(':wargaId/pembayaran/bulk')
+  @RequirePermission('warga:write')
+  @Audit('CATAT_PEMBAYARAN_BULK')
+  async recordBulkPayment(
+    @Param('wargaId') wargaId: string,
+    @Body() body: any,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.wargaService.recordBulkPayment(
+      wargaId,
+      body,
+      req.user.id,
+      req.user.tenantId,
+    );
+  }
+
   @Get('rekap-iuran/:year')
   @RequirePermission('warga:read')
-  async getRekapIuran(@Param('year') year: string, @Request() req: any) {
+  async getRekapIuran(
+    @Param('year') year: string,
+    @Request() req: RequestWithUser,
+  ) {
     return this.wargaService.getRekapIuran(
       parseInt(year, 10),
       req.user.tenantId,

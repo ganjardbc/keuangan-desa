@@ -67,6 +67,52 @@ export const useWargaStore = defineStore('warga', () => {
     }
   }
 
+  async function payIuranBulk(
+    wargaId: string,
+    bulkData: {
+      payments: {
+        jenisIuranId: string
+        month: number
+        year: number
+        amountPaid: number
+      }[]
+      kasAccountId?: string
+    },
+  ) {
+    loading.value = true
+    try {
+      await api.post(`/warga/${wargaId}/pembayaran/bulk`, bulkData)
+      return true
+    } catch (err: any) {
+      error.value =
+        err.response?.data?.message || 'Gagal merekam pembayaran iuran massal.'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function payIuranBulkAll(bulkAllData: {
+    wargaIds: string[]
+    jenisIuranId: string
+    month: number
+    year: number
+    kasAccountId?: string
+  }) {
+    loading.value = true
+    try {
+      await api.post(`/warga/pembayaran/bulk-all`, bulkAllData)
+      return true
+    } catch (err: any) {
+      error.value =
+        err.response?.data?.message ||
+        'Gagal merekam pembayaran iuran massal warga.'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function addWarga(warga: Omit<Warga, 'id' | 'isActive'>) {
     loading.value = true
     try {
@@ -151,6 +197,8 @@ export const useWargaStore = defineStore('warga', () => {
     fetchWarga,
     fetchRekapIuran,
     payIuran,
+    payIuranBulk,
+    payIuranBulkAll,
     addWarga,
     updateWarga,
     deleteWarga,

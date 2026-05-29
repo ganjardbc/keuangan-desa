@@ -66,6 +66,8 @@ function buildDetails(action: string, data: any, body: any): string {
     UBAH_WARGA: `Memperbarui data warga ID: ${data?.id ?? '-'}`,
     HAPUS_WARGA: `Menghapus warga ID: ${data?.id ?? '-'}`,
     CATAT_PEMBAYARAN: `Mencatat pembayaran iuran warga ID: ${data?.wargaId ?? '-'}, bulan ${data?.month ?? '-'}/${data?.year ?? '-'}`,
+    CATAT_PEMBAYARAN_BULK: `Mencatat pembayaran iuran massal warga ID: ${data?.[0]?.wargaId ?? '-'} (${data?.length ?? 0} iuran)`,
+    CATAT_PEMBAYARAN_BULK_ALL: `Mencatat pembayaran iuran cepat semua warga (${data?.length ?? 0} iuran)`,
     TAMBAH_TRANSAKSI: `Menambah transaksi: ${name} sebesar Rp ${data?.amount?.toLocaleString('id-ID') ?? '-'}`,
     HAPUS_TRANSAKSI: `Menghapus transaksi ID: ${data?.id ?? '-'}`,
     TAMBAH_KAS: `Menambah akun kas: ${name}`,
