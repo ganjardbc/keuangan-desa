@@ -6,13 +6,15 @@ import { useAuthStore } from '../../../modules/auth/stores/auth'
 import TemplateList from '../../../components/TemplateList.vue'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
-import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
-import Select from 'primevue/select'
-import InputNumber from 'primevue/inputnumber'
 import InputGroup from 'primevue/inputgroup'
 import InputGroupAddon from 'primevue/inputgroupaddon'
 import Paginator from 'primevue/paginator'
+
+// Import new Dialog components
+import WargaDialog from '../components/WargaDialog.vue'
+import IuranMappingDialog from '../components/IuranMappingDialog.vue'
+import BulkIuranMappingDialog from '../components/BulkIuranMappingDialog.vue'
 
 const wargaStore = useWargaStore()
 const jenisIuranStore = useJenisIuranStore()
@@ -21,17 +23,14 @@ const authStore = useAuthStore()
 // State Dialogs
 const isWargaDialogOpen = ref(false)
 const isIuranDialogOpen = ref(false)
+const isBulkIuranDialogOpen = ref(false)
 const isEditing = ref(false)
 const currentWargaId = ref<string | null>(null)
+const selectedWarga = ref<Warga | null>(null)
 const first = ref(0)
 const rows = ref(9)
 const searchQuery = ref('')
-
-// Warga Form State
-const name = ref('')
-const houseNumber = ref('')
-const phoneNumber = ref('')
-const status = ref('sudah_bayar')
+const bulkErrorMessage = ref<string | null>(null)
 
 const statuses = ['sudah_bayar', 'belum_bayar', 'menunggak']
 
@@ -72,8 +71,6 @@ const getStatusConfig = (status: string) => {
 
 // Iuran Mapping Dialog State
 const mappedIuran = ref<any[]>([])
-const selectedJenisIuranId = ref('')
-const customAmount = ref<number | null>(null)
 
 watch(searchQuery, () => {
   first.value = 0
@@ -105,33 +102,23 @@ onMounted(() => {
 const openAddWargaDialog = () => {
   isEditing.value = false
   currentWargaId.value = null
-  name.value = ''
-  houseNumber.value = ''
-  phoneNumber.value = ''
-  status.value = 'sudah_bayar'
+  selectedWarga.value = null
   isWargaDialogOpen.value = true
 }
 
 const openEditWargaDialog = (warga: Warga) => {
   isEditing.value = true
   currentWargaId.value = warga.id
-  name.value = warga.name
-  houseNumber.value = warga.houseNumber
-  phoneNumber.value = warga.phoneNumber || ''
-  status.value = warga.status
+  selectedWarga.value = warga
   isWargaDialogOpen.value = true
 }
 
-const handleSaveWarga = async () => {
-  if (!name.value || !houseNumber.value) return
-
-  const payload = {
-    name: name.value,
-    houseNumber: houseNumber.value,
-    phoneNumber: phoneNumber.value || undefined,
-    status: status.value,
-  }
-
+const handleSaveWarga = async (payload: {
+  name: string
+  houseNumber: string
+  phoneNumber: string
+  status: string
+}) => {
   let success = false
   if (isEditing.value && currentWargaId.value) {
     success = await wargaStore.updateWarga(currentWargaId.value, payload)
@@ -157,18 +144,23 @@ const handleDeleteWarga = async (id: string) => {
 // Iuran Mapping Actions
 const openIuranMappingDialog = (warga: Warga) => {
   currentWargaId.value = warga.id
+  selectedWarga.value = warga
   mappedIuran.value = warga.iuranBulanan || []
-  selectedJenisIuranId.value = ''
-  customAmount.value = null
   isIuranDialogOpen.value = true
 }
 
-const handleAddIuranMapping = async () => {
-  if (!currentWargaId.value || !selectedJenisIuranId.value) return
+const handleAddIuranMapping = async ({
+  jenisIuranId,
+  customAmount,
+}: {
+  jenisIuranId: string
+  customAmount: number | null
+}) => {
+  if (!currentWargaId.value) return
 
   const success = await wargaStore.assignIuran(currentWargaId.value, {
-    jenisIuranId: selectedJenisIuranId.value,
-    customAmount: customAmount.value,
+    jenisIuranId,
+    customAmount,
   })
 
   if (success) {
@@ -178,9 +170,8 @@ const handleAddIuranMapping = async () => {
     )
     if (updatedWarga) {
       mappedIuran.value = updatedWarga.iuranBulanan || []
+      selectedWarga.value = updatedWarga
     }
-    selectedJenisIuranId.value = ''
-    customAmount.value = null
   }
 }
 
@@ -197,8 +188,30 @@ const handleRemoveIuranMapping = async (jenisIuranId: string) => {
       )
       if (updatedWarga) {
         mappedIuran.value = updatedWarga.iuranBulanan || []
+        selectedWarga.value = updatedWarga
       }
     }
+  }
+}
+
+// Bulk Iuran Mapping Actions
+const openBulkIuranMappingDialog = () => {
+  bulkErrorMessage.value = null
+  isBulkIuranDialogOpen.value = true
+}
+
+const handleBulkIuranMappingSave = async (payload: {
+  wargaIds: string[]
+  jenisIuranId: string
+  customAmount: number | null
+}) => {
+  bulkErrorMessage.value = null
+  const success = await wargaStore.assignIuranBulk(payload)
+  if (success) {
+    isBulkIuranDialogOpen.value = false
+  } else {
+    bulkErrorMessage.value =
+      wargaStore.error || 'Gagal memetakan iuran secara massal.'
   }
 }
 
@@ -216,30 +229,35 @@ const formatCurrency = (val: number) => {
     title="Kelola Data Warga"
     description="Atur profil penduduk, nomor rumah, dan pemetaan iuran bulanan"
   >
-    <template #actions>
-      <div
-        class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto"
-      >
-        <div class="relative flex items-center">
-          <InputGroup>
-            <InputText
-              v-model="searchQuery"
-              fluid
-              placeholder="Cari warga / no. rumah..."
-            />
-            <InputGroupAddon>
-              <i class="pi pi-search text-slate-400" />
-            </InputGroupAddon>
-          </InputGroup>
-        </div>
-        <Button
-          v-if="authStore.hasPermission('warga:write')"
-          label="Tambah Warga"
-          icon="pi pi-plus"
-          @click="openAddWargaDialog"
-        />
+    <div
+      class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto"
+    >
+      <div class="relative flex-1 flex items-center">
+        <InputGroup>
+          <InputText
+            v-model="searchQuery"
+            fluid
+            placeholder="Cari warga / no. rumah..."
+          />
+          <InputGroupAddon>
+            <i class="pi pi-search text-slate-400" />
+          </InputGroupAddon>
+        </InputGroup>
       </div>
-    </template>
+      <Button
+        v-if="authStore.hasPermission('warga:write')"
+        label="Iuran Massal"
+        icon="pi pi-cog"
+        severity="secondary"
+        @click="openBulkIuranMappingDialog"
+      />
+      <Button
+        v-if="authStore.hasPermission('warga:write')"
+        label="Tambah Warga"
+        icon="pi pi-plus"
+        @click="openAddWargaDialog"
+      />
+    </div>
 
     <!-- Skeleton Cards while loading -->
     <div
@@ -444,214 +462,29 @@ const formatCurrency = (val: number) => {
     </div>
   </TemplateList>
 
-  <!-- Dialog Add/Edit Warga -->
-  <Dialog
+  <!-- Dialog Components -->
+  <WargaDialog
     v-model:visible="isWargaDialogOpen"
-    :header="isEditing ? 'Edit Data Warga' : 'Tambah Warga Baru'"
-    modal
-    class="w-full max-w-md bg-white border border-slate-200 rounded-2xl text-slate-900"
-  >
-    <div class="space-y-4 pt-4">
-      <div class="flex flex-col gap-2">
-        <label
-          class="text-xs font-semibold text-slate-500 uppercase tracking-wider"
-          >Nama Lengkap</label
-        >
-        <InputText
-          v-model="name"
-          placeholder="Contoh: Budi Santoso"
-          class="w-full !bg-white !border-slate-200 !text-slate-900 placeholder-slate-400 rounded-xl text-sm"
-          required
-        />
-      </div>
+    :warga="selectedWarga"
+    :is-editing="isEditing"
+    :statuses="statuses"
+    @save="handleSaveWarga"
+  />
 
-      <div class="flex flex-col gap-2">
-        <label
-          class="text-xs font-semibold text-slate-500 uppercase tracking-wider"
-          >Nomor Rumah</label
-        >
-        <InputText
-          v-model="houseNumber"
-          placeholder="Contoh: A-12"
-          class="w-full !bg-white !border-slate-200 !text-slate-900 placeholder-slate-400 rounded-xl text-sm"
-          required
-        />
-      </div>
-
-      <div class="flex flex-col gap-2">
-        <label
-          class="text-xs font-semibold text-slate-500 uppercase tracking-wider"
-          >Nomor Telp / WhatsApp</label
-        >
-        <InputText
-          v-model="phoneNumber"
-          placeholder="Contoh: 08123456789"
-          class="w-full !bg-white !border-slate-200 !text-slate-900 placeholder-slate-400 rounded-xl text-sm"
-        />
-      </div>
-
-      <div class="flex flex-col gap-2">
-        <label
-          class="text-xs font-semibold text-slate-500 uppercase tracking-wider"
-          >Status Iuran</label
-        >
-        <Select
-          v-model="status"
-          :options="statuses"
-          placeholder="Pilih Status"
-          class="w-full !bg-white !border-slate-200 !text-slate-900 rounded-xl text-sm"
-          required
-        >
-          <template #value="slotProps">
-            <div v-if="slotProps.value" class="flex items-center gap-2">
-              <i
-                :class="`pi ${getStatusConfig(slotProps.value).icon} text-xs ${getStatusConfig(slotProps.value).text}`"
-              />
-              <span class="font-medium text-slate-700 text-xs">{{
-                getStatusConfig(slotProps.value).label
-              }}</span>
-            </div>
-            <span v-else>{{ slotProps.placeholder }}</span>
-          </template>
-          <template #option="slotProps">
-            <div class="flex items-center gap-2">
-              <i
-                :class="`pi ${getStatusConfig(slotProps.option).icon} text-xs ${getStatusConfig(slotProps.option).text}`"
-              />
-              <span class="font-medium text-slate-700 text-xs">{{
-                getStatusConfig(slotProps.option).label
-              }}</span>
-            </div>
-          </template>
-        </Select>
-      </div>
-    </div>
-
-    <template #footer>
-      <div class="flex items-center gap-3 justify-end mt-6">
-        <Button
-          label="Batal"
-          severity="secondary"
-          text
-          @click="isWargaDialogOpen = false"
-        />
-        <Button label="Simpan" @click="handleSaveWarga" />
-      </div>
-    </template>
-  </Dialog>
-
-  <!-- Dialog Manage Iuran Mapping -->
-  <Dialog
+  <IuranMappingDialog
     v-model:visible="isIuranDialogOpen"
-    header="Kelola Iuran Warga"
-    modal
-    class="w-full max-w-lg bg-white border border-slate-200 rounded-2xl text-slate-900"
-  >
-    <div class="space-y-6 pt-4">
-      <!-- Add New Mapping Form -->
-      <div
-        class="bg-violet-50 border border-violet-100 p-4 rounded-xl space-y-4"
-      >
-        <p class="text-xs font-bold text-slate-700 uppercase tracking-wider">
-          Hubungkan ke Iuran Baru
-        </p>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div class="flex flex-col gap-1.5">
-            <label class="text-[10px] text-slate-500 uppercase tracking-wider"
-              >Jenis Iuran</label
-            >
-            <Select
-              v-model="selectedJenisIuranId"
-              :options="jenisIuranStore.jenisIuranList"
-              option-value="id"
-              option-label="name"
-              placeholder="Pilih Iuran"
-              class="w-full !bg-white !border-slate-200 !text-slate-900 rounded-xl text-xs"
-            />
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <label class="text-[10px] text-slate-500 uppercase tracking-wider"
-              >Tarif Kustom (Opsional Rp)</label
-            >
-            <InputNumber
-              v-model="customAmount"
-              placeholder="Gunakan default jika kosong"
-              mode="currency"
-              currency="IDR"
-              locale="id-ID"
-              :min="0"
-              class="w-full"
-              input-class="w-full !bg-white !border-slate-200 !text-slate-900 placeholder-slate-400 rounded-xl text-xs"
-            />
-          </div>
-        </div>
-        <Button
-          label="Petakan Iuran"
-          icon="pi pi-plus"
-          size="small"
-          class="w-full"
-          @click="handleAddIuranMapping"
-        />
-      </div>
+    :mapped-iuran="mappedIuran"
+    :jenis-iuran-list="jenisIuranStore.jenisIuranList"
+    @assign="handleAddIuranMapping"
+    @unassign="handleRemoveIuranMapping"
+  />
 
-      <!-- Mapped Iuran List -->
-      <div>
-        <p
-          class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3"
-        >
-          Iuran yang Diikuti:
-        </p>
-        <div class="divide-y divide-slate-100">
-          <div
-            v-for="mapping in mappedIuran"
-            :key="mapping.id"
-            class="flex items-center justify-between py-3 first:pt-0"
-          >
-            <div>
-              <p class="text-sm font-semibold text-slate-900">
-                {{ mapping.jenisIuran.name }}
-              </p>
-              <p class="text-xs text-slate-500">
-                Nominal:
-                <span class="text-violet-600 font-bold">
-                  {{
-                    formatCurrency(
-                      mapping.customAmount ?? mapping.jenisIuran.defaultAmount,
-                    )
-                  }}
-                </span>
-                <span
-                  v-if="mapping.customAmount"
-                  class="text-[10px] text-emerald-600 ml-1"
-                  >(Tarif Kustom)</span
-                >
-              </p>
-            </div>
-            <Button
-              icon="pi pi-times"
-              severity="danger"
-              outlined
-              size="small"
-              title="Hapus Pemetaan"
-              @click="handleRemoveIuranMapping(mapping.jenisIuranId)"
-            />
-          </div>
-
-          <div
-            v-if="mappedIuran.length === 0"
-            class="text-center p-6 text-slate-400 text-xs"
-          >
-            Warga ini belum mengikuti iuran apapun.
-          </div>
-        </div>
-      </div>
-    </div>
-    <template #footer>
-      <Button
-        label="Tutup"
-        severity="secondary"
-        @click="isIuranDialogOpen = false"
-      />
-    </template>
-  </Dialog>
+  <BulkIuranMappingDialog
+    v-model:visible="isBulkIuranDialogOpen"
+    :warga-list="wargaStore.wargaList"
+    :jenis-iuran-list="jenisIuranStore.jenisIuranList"
+    :loading="wargaStore.loading"
+    :error-message="bulkErrorMessage"
+    @save="handleBulkIuranMappingSave"
+  />
 </template>

@@ -138,6 +138,49 @@ export class WargaService {
     });
   }
 
+  async assignIuranBulk(
+    data: { wargaIds: string[]; jenisIuranId: string; customAmount?: number },
+    tenantId: string,
+  ) {
+    const jenisIuran = await this.prisma.jenisIuran.findFirst({
+      where: { id: data.jenisIuranId, tenantId },
+    });
+    if (!jenisIuran) {
+      throw new NotFoundException('Jenis Iuran tidak ditemukan');
+    }
+
+    return this.prisma.$transaction(async (prismaClient) => {
+      const records = [];
+      for (const wargaId of data.wargaIds) {
+        const warga = await prismaClient.warga.findUnique({
+          where: { id: wargaId },
+        });
+        if (!warga || warga.tenantId !== tenantId) continue;
+
+        const existing = await prismaClient.iuranBulanan.findFirst({
+          where: { wargaId, jenisIuranId: data.jenisIuranId },
+        });
+        if (existing) {
+          const updated = await prismaClient.iuranBulanan.update({
+            where: { id: existing.id },
+            data: { customAmount: data.customAmount },
+          });
+          records.push(updated);
+        } else {
+          const created = await prismaClient.iuranBulanan.create({
+            data: {
+              wargaId,
+              jenisIuranId: data.jenisIuranId,
+              customAmount: data.customAmount,
+            },
+          });
+          records.push(created);
+        }
+      }
+      return records;
+    });
+  }
+
   async unassignIuran(wargaId: string, jenisIuranId: string, tenantId: string) {
     const warga = await this.prisma.warga.findUnique({
       where: { id: wargaId },

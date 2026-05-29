@@ -6,6 +6,7 @@ import Column from 'primevue/column'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Tag from 'primevue/tag'
+import SelectButton from 'primevue/selectbutton'
 import api from '../../../lib/axios'
 import TemplateList from '../../../components/TemplateList.vue'
 
@@ -22,6 +23,11 @@ const name = ref('')
 const code = ref('')
 const address = ref('')
 const isActive = ref(true)
+
+const statusOptions = ref([
+  { label: 'Aktif', value: true },
+  { label: 'Non-Aktif', value: false },
+])
 
 const fetchTenants = async () => {
   loading.value = true
@@ -262,32 +268,14 @@ const formatDate = (dateStr: string) => {
         <span class="text-xs font-semibold text-slate-700"
           >Status Aktif Tenant</span
         >
-        <div class="flex gap-2">
-          <button
-            type="button"
-            class="px-3 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer"
-            :class="
-              isActive
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-sm'
-                : 'bg-white border-slate-200 text-slate-400'
-            "
-            @click="isActive = true"
-          >
-            Aktif
-          </button>
-          <button
-            type="button"
-            class="px-3 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer"
-            :class="
-              !isActive
-                ? 'bg-rose-50 border-rose-200 text-rose-600 shadow-sm'
-                : 'bg-white border-slate-200 text-slate-400'
-            "
-            @click="isActive = false"
-          >
-            Non-Aktif
-          </button>
-        </div>
+        <SelectButton
+          v-model="isActive"
+          :options="statusOptions"
+          option-label="label"
+          option-value="value"
+          :allow-empty="false"
+          class="text-xs"
+        />
       </div>
 
       <!-- Submit -->

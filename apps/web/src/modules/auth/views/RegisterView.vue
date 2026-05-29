@@ -66,7 +66,7 @@ const handleRegister = async () => {
           <!-- Logo Header -->
           <div class="flex items-center justify-between gap-2">
             <div
-              class="h-12 w-12 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center shadow-xl shadow-indigo-500/20"
+              class="h-12 w-12 rounded-2xl bg-primary-500 flex items-center justify-center shadow-xl"
             >
               <i class="pi pi-user-plus text-white text-xl"></i>
             </div>
@@ -163,7 +163,7 @@ const handleRegister = async () => {
               class="space-y-4 pt-2 border-t border-slate-100"
             >
               <p
-                class="text-xs font-bold text-violet-600 uppercase tracking-wider"
+                class="text-xs font-bold text-primary-600 uppercase tracking-wider"
               >
                 Informasi Tenant Baru
               </p>
@@ -199,7 +199,7 @@ const handleRegister = async () => {
             <!-- Conditional Section: Gabung Tenant -->
             <div v-else class="space-y-4 pt-2 border-t border-slate-100">
               <p
-                class="text-xs font-bold text-indigo-600 uppercase tracking-wider"
+                class="text-xs font-bold text-primary-600 uppercase tracking-wider"
               >
                 Gabung Tenant Terdaftar
               </p>
@@ -243,7 +243,7 @@ const handleRegister = async () => {
             <div class="text-center">
               <router-link
                 to="/login"
-                class="text-xs text-violet-600 hover:underline font-semibold"
+                class="text-xs text-primary-600 hover:underline font-semibold"
               >
                 Sudah punya akun? Masuk di sini
               </router-link>

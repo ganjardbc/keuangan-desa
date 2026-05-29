@@ -1,18 +1,22 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch, reactive } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useWargaStore } from '../stores/warga'
 import { useAuthStore } from '../../../modules/auth/stores/auth'
 import { useFinanceStore } from '../../finance/stores/finance'
 import { useJenisIuranStore } from '../../finance/stores/jenis-iuran'
 import TemplateList from '../../../components/TemplateList.vue'
 import Button from 'primevue/button'
-import Dialog from 'primevue/dialog'
 import Select from 'primevue/select'
-import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import InputGroup from 'primevue/inputgroup'
 import InputGroupAddon from 'primevue/inputgroupaddon'
 import Paginator from 'primevue/paginator'
+
+// Import new Dialog components
+import PaymentDialog from '../components/PaymentDialog.vue'
+import BulkPaymentDialog from '../components/BulkPaymentDialog.vue'
+import BulkAllPaymentDialog from '../components/BulkAllPaymentDialog.vue'
+import WaPreviewDialog from '../components/WaPreviewDialog.vue'
 
 const wargaStore = useWargaStore()
 const authStore = useAuthStore()
@@ -26,15 +30,9 @@ const bulkAllErrorMessage = ref('')
 // Bulk Payment State (Single Resident)
 const isBulkPaymentDialogOpen = ref(false)
 const bulkSelectedWarga = ref<any>(null)
-const bulkSelectedIurans = reactive<Record<string, boolean>>({}) // key: "month-jenisIuranId", value: true/false
-const bulkKasAccountId = ref<string>('')
 
 // Bulk All Payment State (All Residents)
 const isBulkAllPaymentDialogOpen = ref(false)
-const bulkAllSelectedIuranId = ref<string>('')
-const bulkAllSelectedMonth = ref<number | null>(null)
-const bulkAllKasAccountId = ref<string>('')
-const bulkAllWargaChecklist = reactive<Record<string, boolean>>({})
 
 // Filters
 const selectedYear = ref(new Date().getFullYear())
@@ -47,15 +45,15 @@ const rows = ref(9)
 const isPaymentDialogOpen = ref(false)
 const selectedWarga = ref<any>(null)
 const selectedMonth = ref<number | null>(null)
-const selectedMonthName = computed(() => {
-  if (selectedMonth.value === null) return ''
-  return monthsList.find((m) => m.value === selectedMonth.value)?.nameFull || ''
-})
 
-// New Payment Form State
-const selectedIuranId = ref<string>('')
-const amountPaid = ref<number>(0)
 const submitLoading = ref(false)
+
+// WhatsApp Preview/Receipt States
+const isWaPreviewOpen = ref(false)
+const selectedWaPayment = ref<any>(null)
+const selectedWaWarga = ref<any>(null)
+const selectedWaMonth = ref<number | null>(null)
+const selectedWaYear = ref<number>(new Date().getFullYear())
 
 const monthsList = [
   { value: 1, name: 'Jan', nameFull: 'Januari' },
@@ -167,57 +165,24 @@ const getMonthStatus = (warga: any, monthVal: number) => {
 const openPaymentDialog = (warga: any, monthVal: number) => {
   selectedWarga.value = warga
   selectedMonth.value = monthVal
-  selectedIuranId.value = ''
-  amountPaid.value = 0
-
-  // Set default form values if there are unpaid iurans
-  const unpaid = unpaidIurans.value
-  if (unpaid.length > 0) {
-    selectedIuranId.value = unpaid[0].jenisIuran.id
-    amountPaid.value =
-      unpaid[0].customAmount ?? unpaid[0].jenisIuran.defaultAmount
-  }
-
   isPaymentDialogOpen.value = true
 }
 
-// Compute unpaid iurans for the selected month
-const unpaidIurans = computed(() => {
-  if (!selectedWarga.value || selectedMonth.value === null) return []
-  const monthData = getMonthData(selectedWarga.value, selectedMonth.value)
-  const paidIuranNames = monthData.payments.map((p: any) => p.jenisIuranName)
-
-  return selectedWarga.value.iuranBulanan.filter(
-    (ib: any) => !paidIuranNames.includes(ib.jenisIuran.name),
-  )
-})
-
-// Watch selected iuran and update amount automatically
-watch(selectedIuranId, (newId) => {
-  if (!newId || !selectedWarga.value) return
-  const mapping = selectedWarga.value.iuranBulanan.find(
-    (ib: any) => ib.jenisIuran.id === newId,
-  )
-  if (mapping) {
-    amountPaid.value = mapping.customAmount ?? mapping.jenisIuran.defaultAmount
-  }
-})
-
-const handleRecordPayment = async () => {
-  if (
-    !selectedWarga.value ||
-    !selectedMonth.value ||
-    !selectedIuranId.value ||
-    amountPaid.value <= 0
-  )
-    return
+const handlePay = async ({
+  jenisIuranId,
+  amountPaid,
+}: {
+  jenisIuranId: string
+  amountPaid: number
+}) => {
+  if (!selectedWarga.value || selectedMonth.value === null) return
 
   submitLoading.value = true
   const success = await wargaStore.payIuran(selectedWarga.value.id, {
-    jenisIuranId: selectedIuranId.value,
+    jenisIuranId,
     month: selectedMonth.value,
     year: selectedYear.value,
-    amountPaid: amountPaid.value,
+    amountPaid,
   })
 
   if (success) {
@@ -226,154 +191,38 @@ const handleRecordPayment = async () => {
     selectedWarga.value = wargaStore.rekapList.find(
       (w) => w.id === selectedWarga.value.id,
     )
-
-    // Reset or update selected iuran
-    const unpaid = unpaidIurans.value
-    if (unpaid.length > 0) {
-      selectedIuranId.value = unpaid[0].jenisIuran.id
-      amountPaid.value =
-        unpaid[0].customAmount ?? unpaid[0].jenisIuran.defaultAmount
-    } else {
-      selectedIuranId.value = ''
-      amountPaid.value = 0
-    }
+    isPaymentDialogOpen.value = false
   }
   submitLoading.value = false
 }
 
-// --- Bulk Payment Helpers & Methods (Single Resident) ---
-
-const getUnpaidIuransForMonth = (warga: any, monthVal: number) => {
-  if (!warga) return []
-  const monthData = getMonthData(warga, monthVal)
-  const paidNames = monthData.payments.map((p: any) => p.jenisIuranName)
-  return warga.iuranBulanan.filter(
-    (ib: any) => !paidNames.includes(ib.jenisIuran.name),
-  )
-}
-
-const bulkUnpaidMonthsList = computed(() => {
-  if (!bulkSelectedWarga.value) return []
-  return monthsList.filter((m) => {
-    const unpaid = getUnpaidIuransForMonth(bulkSelectedWarga.value, m.value)
-    return unpaid.length > 0
-  })
-})
-
-const bulkSelectedCount = computed(() => {
-  return Object.values(bulkSelectedIurans).filter(Boolean).length
-})
-
-const bulkTotalAmount = computed(() => {
-  if (!bulkSelectedWarga.value) return 0
-  let total = 0
-  Object.entries(bulkSelectedIurans).forEach(([key, isChecked]) => {
-    if (!isChecked) return
-    const [monthValStr, iuranId] = key.split('-')
-    const monthVal = parseInt(monthValStr, 10)
-    const unpaid = getUnpaidIuransForMonth(bulkSelectedWarga.value, monthVal)
-    const ib = unpaid.find((item: any) => item.jenisIuran.id === iuranId)
-    if (ib) {
-      total += ib.customAmount ?? ib.jenisIuran.defaultAmount
-    }
-  })
-  return total
-})
-
-const isAllSelectedForMonth = (monthVal: number) => {
-  if (!bulkSelectedWarga.value) return false
-  const unpaid = getUnpaidIuransForMonth(bulkSelectedWarga.value, monthVal)
-  return unpaid.every(
-    (ib: any) => bulkSelectedIurans[`${monthVal}-${ib.jenisIuran.id}`],
-  )
-}
-
-const toggleMonthAllIurans = (monthVal: number) => {
-  if (!bulkSelectedWarga.value) return
-  const unpaid = getUnpaidIuransForMonth(bulkSelectedWarga.value, monthVal)
-  const allSelected = isAllSelectedForMonth(monthVal)
-  unpaid.forEach((ib: any) => {
-    bulkSelectedIurans[`${monthVal}-${ib.jenisIuran.id}`] = !allSelected
-  })
-}
-
-const selectAllBulkIurans = () => {
-  if (!bulkSelectedWarga.value) return
-  for (let m = 1; m <= 12; m++) {
-    const unpaid = getUnpaidIuransForMonth(bulkSelectedWarga.value, m)
-    unpaid.forEach((ib: any) => {
-      bulkSelectedIurans[`${m}-${ib.jenisIuran.id}`] = true
-    })
-  }
-}
-
-const selectUpToCurrentMonth = () => {
-  if (!bulkSelectedWarga.value) return
-  const currentMonthNum = new Date().getMonth() + 1
-  for (let m = 1; m <= 12; m++) {
-    const unpaid = getUnpaidIuransForMonth(bulkSelectedWarga.value, m)
-    unpaid.forEach((ib: any) => {
-      bulkSelectedIurans[`${m}-${ib.jenisIuran.id}`] = m <= currentMonthNum
-    })
-  }
-}
-
-const clearAllBulkIurans = () => {
-  Object.keys(bulkSelectedIurans).forEach((key) => {
-    bulkSelectedIurans[key] = false
-  })
-}
-
+// Bulk Payment (Single Resident)
 const openBulkPaymentDialog = (warga: any) => {
   bulkSelectedWarga.value = warga
   errorMessage.value = ''
 
-  // Clear reactive object properties
-  Object.keys(bulkSelectedIurans).forEach((key) => {
-    delete bulkSelectedIurans[key]
-  })
-
-  for (let m = 1; m <= 12; m++) {
-    const unpaid = getUnpaidIuransForMonth(warga, m)
-    unpaid.forEach((ib: any) => {
-      bulkSelectedIurans[`${m}-${ib.jenisIuran.id}`] = false
-    })
-  }
-
   if (financeStore.kasAccounts.length === 0) {
     financeStore.fetchKasAccounts()
   }
-  bulkKasAccountId.value = financeStore.kasAccounts[0]?.id || ''
 
   isBulkPaymentDialogOpen.value = true
 }
 
-const handleRecordBulkPayment = async () => {
-  if (!bulkSelectedWarga.value || bulkSelectedCount.value === 0) return
+const handleBulkPay = async ({
+  payments,
+  kasAccountId,
+}: {
+  payments: any[]
+  kasAccountId: string
+}) => {
+  if (!bulkSelectedWarga.value) return
 
   submitLoading.value = true
   errorMessage.value = ''
 
-  const paymentsToSend: any[] = []
-  Object.entries(bulkSelectedIurans).forEach(([key, isChecked]) => {
-    if (!isChecked) return
-    const [monthValStr, iuranId] = key.split('-')
-    const monthVal = parseInt(monthValStr, 10)
-    const unpaid = getUnpaidIuransForMonth(bulkSelectedWarga.value, monthVal)
-    const ib = unpaid.find((item: any) => item.jenisIuran.id === iuranId)
-    if (ib) {
-      paymentsToSend.push({
-        jenisIuranId: iuranId,
-        month: monthVal,
-        year: selectedYear.value,
-        amountPaid: ib.customAmount ?? ib.jenisIuran.defaultAmount,
-      })
-    }
-  })
-
   const success = await wargaStore.payIuranBulk(bulkSelectedWarga.value.id, {
-    payments: paymentsToSend,
-    kasAccountId: bulkKasAccountId.value || undefined,
+    payments,
+    kasAccountId: kasAccountId || undefined,
   })
 
   if (success) {
@@ -387,120 +236,39 @@ const handleRecordBulkPayment = async () => {
   submitLoading.value = false
 }
 
-// --- Bulk All Payment Helpers & Methods (Multi Resident) ---
-
+// Bulk All Payment (Multi Resident)
 const bulkAllIuranOptions = computed(() => {
   return jenisIuranStore.jenisIuranList.filter((ji) => ji.period === 'BULANAN')
 })
 
-const unpaidWargaList = computed(() => {
-  if (!bulkAllSelectedIuranId.value || bulkAllSelectedMonth.value === null)
-    return []
-
-  return wargaStore.rekapList.filter((warga) => {
-    const isAssigned = warga.iuranBulanan.some(
-      (ib: any) => ib.jenisIuran.id === bulkAllSelectedIuranId.value,
-    )
-    if (!isAssigned) return false
-
-    const monthData = getMonthData(warga, bulkAllSelectedMonth.value!)
-    const paidNames = monthData.payments.map((p: any) => p.jenisIuranName)
-    const mapping = warga.iuranBulanan.find(
-      (ib: any) => ib.jenisIuran.id === bulkAllSelectedIuranId.value,
-    )
-    return !paidNames.includes(mapping.jenisIuran.name)
-  })
-})
-
-watch(unpaidWargaList, (newList) => {
-  Object.keys(bulkAllWargaChecklist).forEach((key) => {
-    delete bulkAllWargaChecklist[key]
-  })
-  newList.forEach((warga) => {
-    bulkAllWargaChecklist[warga.id] = true
-  })
-})
-
-const bulkAllSelectedCount = computed(() => {
-  return Object.values(bulkAllWargaChecklist).filter(Boolean).length
-})
-
-const bulkAllTotalAmount = computed(() => {
-  if (!bulkAllSelectedIuranId.value) return 0
-  let total = 0
-  unpaidWargaList.value.forEach((warga) => {
-    if (bulkAllWargaChecklist[warga.id]) {
-      const mapping = warga.iuranBulanan.find(
-        (ib: any) => ib.jenisIuran.id === bulkAllSelectedIuranId.value,
-      )
-      if (mapping) {
-        total += mapping.customAmount ?? mapping.jenisIuran.defaultAmount
-      }
-    }
-  })
-  return total
-})
-
-const isAllBulkAllWargaSelected = computed(() => {
-  if (unpaidWargaList.value.length === 0) return false
-  return unpaidWargaList.value.every((w) => bulkAllWargaChecklist[w.id])
-})
-
-const toggleBulkAllWargaSelection = () => {
-  const allSelected = isAllBulkAllWargaSelected.value
-  unpaidWargaList.value.forEach((w) => {
-    bulkAllWargaChecklist[w.id] = !allSelected
-  })
-}
-
 const openBulkAllPaymentDialog = () => {
   bulkAllErrorMessage.value = ''
-  bulkAllSelectedIuranId.value = ''
-  bulkAllSelectedMonth.value = new Date().getMonth() + 1 // Default to current month
-
-  // Set default iuran if available
-  const monthlyIurans = bulkAllIuranOptions.value
-  if (monthlyIurans.length > 0) {
-    bulkAllSelectedIuranId.value = monthlyIurans[0].id
-  }
-
   if (financeStore.kasAccounts.length === 0) {
     financeStore.fetchKasAccounts()
   }
-  bulkAllKasAccountId.value = financeStore.kasAccounts[0]?.id || ''
-
-  // Trigger watch population
-  Object.keys(bulkAllWargaChecklist).forEach((key) => {
-    delete bulkAllWargaChecklist[key]
-  })
-  unpaidWargaList.value.forEach((warga) => {
-    bulkAllWargaChecklist[warga.id] = true
-  })
-
   isBulkAllPaymentDialogOpen.value = true
 }
 
-const handleRecordBulkAllPayment = async () => {
-  if (
-    !bulkAllSelectedIuranId.value ||
-    bulkAllSelectedMonth.value === null ||
-    bulkAllSelectedCount.value === 0
-  )
-    return
-
+const handleBulkAllPay = async ({
+  wargaIds,
+  jenisIuranId,
+  month,
+  kasAccountId,
+}: {
+  wargaIds: string[]
+  jenisIuranId: string
+  month: number
+  kasAccountId: string
+}) => {
   submitLoading.value = true
   bulkAllErrorMessage.value = ''
 
-  const selectedWargaIds = Object.entries(bulkAllWargaChecklist)
-    .filter((entry) => entry[1])
-    .map((entry) => entry[0])
-
   const success = await wargaStore.payIuranBulkAll({
-    wargaIds: selectedWargaIds,
-    jenisIuranId: bulkAllSelectedIuranId.value,
-    month: bulkAllSelectedMonth.value,
+    wargaIds,
+    jenisIuranId,
+    month,
     year: selectedYear.value,
-    kasAccountId: bulkAllKasAccountId.value || undefined,
+    kasAccountId: kasAccountId || undefined,
   })
 
   if (success) {
@@ -513,107 +281,18 @@ const handleRecordBulkAllPayment = async () => {
   submitLoading.value = false
 }
 
-const formatCurrency = (val: number) => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-  }).format(val)
-}
-
-const formatDate = (dateStr: string) => {
-  if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
-}
-
-// --- WhatsApp Notification Helpers ---
-
-// WhatsApp Preview States
-const isWaPreviewOpen = ref(false)
-const waPreviewText = ref('')
-const waTargetPhone = ref('')
-const waTargetWarga = ref<any>(null)
-
-/**
- * Normalizes Indonesian phone number to WhatsApp international format (62xxx).
- * Returns empty string if phoneNumber is empty/null.
- */
-const formatWhatsAppNumber = (phone?: string | null): string => {
-  if (!phone) return ''
-  // Strip all non-digit characters except leading +
-  let cleaned = phone.replace(/[\s\-().]/g, '')
-  if (cleaned.startsWith('+')) {
-    cleaned = cleaned.slice(1)
-  } else if (cleaned.startsWith('0')) {
-    cleaned = '62' + cleaned.slice(1)
-  }
-  return cleaned
-}
-
-/**
- * Compiles custom template from tenant or default and opens Preview Dialog.
- */
-const triggerWhatsAppPreview = (
-  payment: any,
-  warga: any,
-  month: number | null,
-  year: number,
-) => {
-  const monthName =
-    monthsList.find((m) => m.value === month)?.nameFull || `Bulan ${month}`
-  const paidDate = payment.paidAt
-    ? formatDate(payment.paidAt)
-    : new Date().toLocaleDateString('id-ID')
-
-  const defaultTemplate = [
-    `🧾 *KUITANSI PEMBAYARAN IURAN*`,
-    `━━━━━━━━━━━━━━━━━━━━━`,
-    `👤 *Nama Warga  :* {nama}`,
-    `🏠 *No. Rumah   :* {houseNumber}`,
-    `📅 *Periode     :* {periode}`,
-    `━━━━━━━━━━━━━━━━━━━━━`,
-    `📋 *Jenis Iuran :* {jenisIuran}`,
-    `💰 *Jumlah Bayar:* {jumlah}`,
-    `📆 *Tgl Bayar   :* {tglBayar}`,
-    `━━━━━━━━━━━━━━━━━━━━━`,
-    `✅ _Pembayaran ini sah dan telah dicatat dalam sistem keuangan RT/RW._`,
-    `_Terima kasih atas partisipasi Bapak/Ibu._ 🙏`,
-  ].join('\n')
-
-  const template = authStore.user?.tenant?.waReceiptTemplate || defaultTemplate
-
-  // Replace placeholders
-  const message = template
-    .replace(/{nama}/g, warga.name)
-    .replace(/{houseNumber}/g, warga.houseNumber)
-    .replace(/{periode}/g, `${monthName} ${year}`)
-    .replace(/{jenisIuran}/g, payment.jenisIuranName)
-    .replace(/{jumlah}/g, formatCurrency(payment.amountPaid))
-    .replace(/{tglBayar}/g, paidDate)
-
-  waPreviewText.value = message
-  waTargetPhone.value = warga.phoneNumber || ''
-  waTargetWarga.value = warga
+// WhatsApp Preview
+const triggerWhatsAppPreview = ({ payment }: { payment: any }) => {
+  selectedWaPayment.value = payment
+  selectedWaWarga.value = selectedWarga.value
+  selectedWaMonth.value = selectedMonth.value
+  selectedWaYear.value = selectedYear.value
   isWaPreviewOpen.value = true
 }
 
-/**
- * Composes a WhatsApp receipt message and opens wa.me URL.
- */
-const sendWhatsAppReceipt = () => {
-  const encodedMessage = encodeURIComponent(waPreviewText.value)
-  const phoneNumber = formatWhatsAppNumber(waTargetPhone.value)
-  const url = phoneNumber
-    ? `https://wa.me/${phoneNumber}?text=${encodedMessage}`
-    : `https://wa.me/?text=${encodedMessage}`
-
-  window.open(url, '_blank', 'noopener,noreferrer')
-  isWaPreviewOpen.value = false
-}
+const receiptTemplate = computed(() => {
+  return authStore.user?.tenant?.waReceiptTemplate || ''
+})
 
 // Calculated metrics for KPI Cards
 const stats = computed(() => {
@@ -671,6 +350,14 @@ const stats = computed(() => {
   }
 })
 
+const formatCurrency = (val: number) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+  }).format(val)
+}
+
 // Generate payment details tooltip text
 const getTooltipText = (warga: any, monthVal: number) => {
   const monthData = getMonthData(warga, monthVal)
@@ -691,17 +378,11 @@ const getTooltipText = (warga: any, monthVal: number) => {
     title="Matriks Rekapitulasi Iuran"
     description="Pencatatan & pemantauan status iuran bulanan warga per tahun"
   >
-    <template #actions>
-      <div class="flex items-center gap-2">
-        <Select
-          v-model="selectedYear"
-          placeholder="Pilih Tahun"
-          :options="years"
-          fluid
-          class="!border-slate-200 focus:!border-violet-500 focus:!ring-violet-500/20 rounded-xl shadow-sm min-w-[120px]"
-        />
-      </div>
-      <div class="relative flex items-center">
+    <!-- Toolbar -->
+    <div
+      class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto"
+    >
+      <div class="relative flex-1 flex items-center">
         <InputGroup>
           <InputText
             v-model="searchQuery"
@@ -713,7 +394,24 @@ const getTooltipText = (warga: any, monthVal: number) => {
           </InputGroupAddon>
         </InputGroup>
       </div>
-    </template>
+      <div class="flex items-center gap-2">
+        <Select
+          v-model="selectedYear"
+          placeholder="Pilih Tahun"
+          :options="years"
+          fluid
+          class="min-w-[120px]"
+        />
+        <Button
+          v-if="authStore.hasPermission('warga:write')"
+          label="Bayar Massal"
+          icon="pi pi-users"
+          severity="primary"
+          class="min-w-[170px]"
+          @click="openBulkAllPaymentDialog"
+        />
+      </div>
+    </div>
 
     <!-- KPI/Summary Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-2">
@@ -751,12 +449,12 @@ const getTooltipText = (warga: any, monthVal: number) => {
         class="bg-white border border-slate-100 p-5 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 flex items-center gap-4 relative overflow-hidden group"
       >
         <div
-          class="absolute -right-4 -bottom-4 text-violet-500/5 group-hover:scale-110 transition-transform duration-500 select-none"
+          class="absolute -right-4 -bottom-4 text-primary-500/5 group-hover:scale-110 transition-transform duration-500 select-none"
         >
           <i class="pi pi-percentage text-8xl"></i>
         </div>
         <div
-          class="h-12 w-12 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center flex-shrink-0 group-hover:bg-violet-100 transition-colors"
+          class="h-12 w-12 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center flex-shrink-0 group-hover:bg-primary-100 transition-colors"
         >
           <i class="pi pi-percentage text-xl"></i>
         </div>
@@ -781,7 +479,7 @@ const getTooltipText = (warga: any, monthVal: number) => {
             class="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden"
           >
             <div
-              class="bg-gradient-to-r from-violet-500 to-indigo-600 h-full rounded-full transition-all duration-500"
+              class="bg-gradient-to-r from-primary-500 to-indigo-600 h-full rounded-full transition-all duration-500"
               :style="{ width: `${stats.complianceRate}%` }"
             ></div>
           </div>
@@ -864,51 +562,43 @@ const getTooltipText = (warga: any, monthVal: number) => {
     </div>
 
     <!-- Legend / Keterangan -->
-    <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
-      <div class="flex-1 flex flex-wrap gap-x-6 gap-y-2.5 items-center justify-start">
+    <div
+      class="flex-1 flex flex-wrap gap-x-6 gap-y-2.5 items-center justify-start"
+    >
+      <span
+        class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mr-1 select-none"
+        >Keterangan Status:</span
+      >
+      <div class="flex items-center gap-2 text-xs text-slate-600">
         <span
-          class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mr-1 select-none"
-          >Keterangan Status:</span
+          class="w-3.5 h-3.5 rounded-md bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-500"
         >
-        <div class="flex items-center gap-2 text-xs text-slate-600">
-          <span
-            class="w-3.5 h-3.5 rounded-md bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-500"
-          >
-            <i class="pi pi-check text-[8px] font-bold"></i>
-          </span>
-          <span class="font-medium">Lunas</span>
-        </div>
-        <div class="flex items-center gap-2 text-xs text-slate-600">
-          <span
-            class="w-3.5 h-3.5 rounded-md bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-500"
-          >
-            <i class="pi pi-exclamation-circle text-[8px] font-bold"></i>
-          </span>
-          <span class="font-medium">Sebagian</span>
-        </div>
-        <div class="flex items-center gap-2 text-xs text-slate-600">
-          <span
-            class="w-3.5 h-3.5 rounded-md bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-500"
-          >
-            <i class="pi pi-plus text-[8px] font-bold"></i>
-          </span>
-          <span class="font-medium">Belum Bayar</span>
-        </div>
-        <div class="flex items-center gap-2 text-xs text-slate-600">
-          <span
-            class="w-3.5 h-3.5 rounded-md bg-slate-50 border border-slate-200"
-          ></span>
-          <span class="font-medium">Bebas Iuran</span>
-        </div>
+          <i class="pi pi-check text-[8px] font-bold"></i>
+        </span>
+        <span class="font-medium">Lunas</span>
       </div>
-      <Button
-        v-if="authStore.hasPermission('warga:write')"
-        label="Bayar Massal"
-        icon="pi pi-users"
-        severity="primary"
-        class="w-full md:w-42"
-        @click="openBulkAllPaymentDialog"
-      />
+      <div class="flex items-center gap-2 text-xs text-slate-600">
+        <span
+          class="w-3.5 h-3.5 rounded-md bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-500"
+        >
+          <i class="pi pi-exclamation-circle text-[8px] font-bold"></i>
+        </span>
+        <span class="font-medium">Sebagian</span>
+      </div>
+      <div class="flex items-center gap-2 text-xs text-slate-600">
+        <span
+          class="w-3.5 h-3.5 rounded-md bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-500"
+        >
+          <i class="pi pi-plus text-[8px] font-bold"></i>
+        </span>
+        <span class="font-medium">Belum Bayar</span>
+      </div>
+      <div class="flex items-center gap-2 text-xs text-slate-600">
+        <span
+          class="w-3.5 h-3.5 rounded-md bg-slate-50 border border-slate-200"
+        ></span>
+        <span class="font-medium">Bebas Iuran</span>
+      </div>
     </div>
 
     <!-- Skeleton Cards while loading -->
@@ -958,7 +648,7 @@ const getTooltipText = (warga: any, monthVal: number) => {
             <div class="flex items-center gap-3 min-w-0">
               <!-- Initials circle avatar -->
               <div
-                class="h-10 w-10 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-sm select-none flex-shrink-0"
+                class="h-10 w-10 rounded-full bg-gradient-to-tr from-primary-600 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-sm select-none flex-shrink-0"
               >
                 {{ warga.name.charAt(0).toUpperCase() }}
               </div>
@@ -1002,7 +692,7 @@ const getTooltipText = (warga: any, monthVal: number) => {
                 size="small"
                 outlined
                 severity="help"
-                class="!text-[9px] !px-2 !py-0.5 !h-6 !rounded-lg"
+                class="!text-[9px] !px-2 !py-0.5 !h-6 !rounded-full"
                 title="Catat Pembayaran Banyak Bulan Sekaligus"
                 @click="openBulkPaymentDialog(warga)"
               />
@@ -1019,7 +709,7 @@ const getTooltipText = (warga: any, monthVal: number) => {
                 :class="
                   getWargaStats(warga).percentage === 100
                     ? 'bg-emerald-500'
-                    : 'bg-violet-600'
+                    : 'bg-primary-600'
                 "
                 :style="{ width: `${getWargaStats(warga).percentage}%` }"
               ></div>
@@ -1028,20 +718,20 @@ const getTooltipText = (warga: any, monthVal: number) => {
 
           <!-- 12 Months Mini Grid (4 columns x 3 rows) -->
           <div class="grid grid-cols-4 gap-2">
-            <button
+            <Button
               v-for="m in monthsList"
               :key="m.value"
               :title="getTooltipText(warga, m.value)"
               :disabled="getMonthStatus(warga, m.value).code === 'FREE'"
-              class="py-2 px-1 rounded-xl border text-center transition-all select-none font-bold text-[10px] flex flex-col items-center justify-center gap-1 shadow-sm active:scale-95 duration-150"
+              class="!py-2 !px-1 !rounded-xl !border !text-center !transition-all !select-none !font-bold !text-[10px] !flex !flex-col !items-center !justify-center !gap-1 !shadow-sm active:!scale-95 !duration-150 !shadow-none"
               :class="[
                 getMonthStatus(warga, m.value).code === 'FREE'
-                  ? 'bg-slate-50 border-slate-100 text-slate-400 cursor-not-allowed opacity-50'
+                  ? '!bg-slate-50 !border-slate-100 !text-slate-400 !cursor-not-allowed !opacity-50'
                   : getMonthStatus(warga, m.value).code === 'UNPAID'
-                    ? 'bg-rose-50 border-rose-100 hover:bg-rose-100 hover:border-rose-200 text-rose-600 cursor-pointer'
+                    ? '!bg-rose-50 !border-rose-100 hover:!bg-rose-100 hover:!border-rose-200 !text-rose-600 !cursor-pointer'
                     : getMonthStatus(warga, m.value).code === 'PARTIAL'
-                      ? 'bg-amber-50 border-amber-100 hover:bg-amber-100 hover:border-amber-200 text-amber-600 cursor-pointer'
-                      : 'bg-emerald-50 border-emerald-100 hover:bg-emerald-100 hover:border-emerald-200 text-emerald-600 cursor-pointer',
+                      ? '!bg-amber-50 !border-amber-100 hover:!bg-amber-100 hover:!border-amber-200 !text-amber-600 !cursor-pointer'
+                      : '!bg-emerald-50 !border-emerald-100 hover:!bg-emerald-100 hover:!border-emerald-200 !text-emerald-600 !cursor-pointer',
               ]"
               @click="openPaymentDialog(warga, m.value)"
             >
@@ -1069,7 +759,7 @@ const getTooltipText = (warga: any, monthVal: number) => {
                   >-</span
                 >
               </span>
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -1113,800 +803,45 @@ const getTooltipText = (warga: any, monthVal: number) => {
     </div>
   </TemplateList>
 
-  <!-- Dialog Unified Payment Info & Action -->
-  <Dialog
+  <!-- Dialog Components -->
+  <PaymentDialog
     v-model:visible="isPaymentDialogOpen"
-    :header="`Status Iuran: ${selectedWarga?.name || ''}`"
-    modal
-    class="w-full max-w-lg bg-white border border-slate-200 rounded-2xl text-slate-900"
-  >
-    <div class="space-y-6 pt-4">
-      <!-- Metadata Badge-like layout -->
-      <div
-        class="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex justify-between items-center relative overflow-hidden"
-      >
-        <div class="absolute -right-3 -top-3 text-slate-100 select-none">
-          <i class="pi pi-user-edit text-6xl"></i>
-        </div>
-        <div class="relative z-10">
-          <p
-            class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
-          >
-            Warga & No. Rumah
-          </p>
-          <p class="font-bold text-slate-800 text-sm mt-0.5">
-            {{ selectedWarga?.name }}
-          </p>
-          <p class="text-xs text-slate-500 font-mono mt-0.5">
-            Rumah: No. {{ selectedWarga?.houseNumber }}
-          </p>
-        </div>
-        <div class="text-right relative z-10">
-          <p
-            class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
-          >
-            Periode Tagihan
-          </p>
-          <span
-            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-violet-50 text-violet-700 text-xs font-bold border border-violet-100 mt-1"
-          >
-            <i class="pi pi-calendar text-[10px]"></i>
-            {{ selectedMonthName }} {{ selectedYear }}
-          </span>
-        </div>
-      </div>
+    :warga="selectedWarga"
+    :month="selectedMonth"
+    :year="selectedYear"
+    :loading="submitLoading"
+    :has-write-permission="authStore.hasPermission('warga:write')"
+    @pay="handlePay"
+    @send-wa="triggerWhatsAppPreview"
+  />
 
-      <!-- History/List of Payments in selected month -->
-      <div>
-        <div class="flex items-center justify-between mb-3">
-          <h4
-            class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 select-none"
-          >
-            <i class="pi pi-check-circle text-emerald-500"></i>
-            Iuran Terbayar Bulan Ini
-          </h4>
-          <span
-            v-if="selectedWarga && selectedMonth !== null"
-            class="text-[10px] font-semibold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-100"
-          >
-            {{ getMonthData(selectedWarga, selectedMonth).payments.length }}
-            Terbayar
-          </span>
-        </div>
-
-        <div v-if="selectedWarga && selectedMonth !== null">
-          <div
-            v-if="
-              getMonthData(selectedWarga, selectedMonth).payments.length > 0
-            "
-            class="bg-white border border-slate-200/80 rounded-2xl overflow-hidden divide-y divide-slate-100 shadow-sm"
-          >
-            <div
-              v-for="p in getMonthData(selectedWarga, selectedMonth).payments"
-              :key="p.id"
-              class="flex items-center justify-between p-4 hover:bg-slate-50/50 transition-colors gap-3"
-            >
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2">
-                  <p class="text-sm font-bold text-slate-800 truncate">
-                    {{ p.jenisIuranName }}
-                  </p>
-                  <span
-                    class="text-[9px] font-semibold bg-emerald-50 text-emerald-700 px-1.5 py-0.2 rounded border border-emerald-100/50 flex items-center gap-0.5"
-                  >
-                    <i class="pi pi-check text-[8px]"></i> Lunas
-                  </span>
-                </div>
-                <p
-                  class="text-[10px] text-slate-400 flex items-center gap-1 mt-1"
-                >
-                  <i class="pi pi-calendar text-[10px]"></i>
-                  Tgl Bayar: {{ formatDate(p.paidAt) }}
-                </p>
-              </div>
-              <div class="flex items-center gap-3">
-                <div class="text-right">
-                  <span class="text-sm font-extrabold text-slate-900">{{
-                    formatCurrency(p.amountPaid)
-                  }}</span>
-                </div>
-                <!-- WhatsApp Receipt Button (Bendahara only) -->
-                <button
-                  v-if="authStore.hasPermission('warga:write')"
-                  :title="
-                    selectedWarga?.phoneNumber
-                      ? `Kirim kuitansi ke ${selectedWarga.phoneNumber}`
-                      : 'Kirim kuitansi (pilih kontak manual)'
-                  "
-                  class="flex items-center justify-center w-8 h-8 rounded-xl bg-emerald-50 hover:bg-emerald-500 hover:text-white text-emerald-600 transition-all duration-200 cursor-pointer flex-shrink-0 active:scale-90 border border-emerald-100/50"
-                  @click="
-                    triggerWhatsAppPreview(
-                      p,
-                      selectedWarga,
-                      selectedMonth,
-                      selectedYear,
-                    )
-                  "
-                >
-                  <i class="pi pi-whatsapp text-sm"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-          <div
-            v-else
-            class="text-center py-8 bg-slate-50/50 border border-slate-200 border-dashed rounded-2xl text-slate-400 text-xs flex flex-col items-center justify-center gap-2 select-none"
-          >
-            <i class="pi pi-inbox text-lg text-slate-300"></i>
-            <span>Belum ada iuran yang terbayar di bulan ini.</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Payment input (Only visible to users with warga:write permission and if there are unpaid iurans) -->
-      <div
-        v-if="authStore.hasPermission('warga:write') && unpaidIurans.length > 0"
-        class="bg-slate-50/80 border border-slate-200/80 p-5 rounded-2xl space-y-4 shadow-sm"
-      >
-        <div class="flex items-center justify-between">
-          <h4
-            class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 select-none"
-          >
-            <i class="pi pi-plus-circle text-violet-500"></i>
-            Catat Pembayaran Baru
-          </h4>
-          <span
-            class="text-[9px] font-semibold bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full border border-violet-100"
-          >
-            {{ unpaidIurans.length }} Belum Bayar
-          </span>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <!-- Select Dues -->
-          <div class="flex flex-col gap-1.5">
-            <label
-              class="text-[10px] font-bold text-slate-500 uppercase tracking-wider"
-              >Pilih Jenis Iuran</label
-            >
-            <Select
-              v-model="selectedIuranId"
-              :options="unpaidIurans"
-              option-value="jenisIuran.id"
-              option-label="jenisIuran.name"
-              placeholder="Pilih Iuran"
-              class="w-full !bg-white !border-slate-200 !text-slate-900 rounded-xl text-xs shadow-sm focus:!border-violet-500 focus:!ring-violet-500/20"
-            />
-          </div>
-
-          <!-- Amount Input -->
-          <div class="flex flex-col gap-1.5">
-            <label
-              class="text-[10px] font-bold text-slate-500 uppercase tracking-wider"
-              >Jumlah Dibayar (Rp)</label
-            >
-            <InputNumber
-              v-model="amountPaid"
-              mode="currency"
-              currency="IDR"
-              locale="id-ID"
-              :min="0"
-              class="w-full"
-              input-class="w-full !bg-white !border-slate-200 !text-slate-900 placeholder-slate-400 rounded-xl text-xs shadow-sm focus:!border-violet-500 focus:!ring-violet-500/20"
-            />
-          </div>
-        </div>
-
-        <Button
-          :loading="submitLoading"
-          label="Catat Pembayaran"
-          icon="pi pi-credit-card"
-          size="small"
-          class="w-full !py-2.5 !rounded-xl !bg-violet-600 hover:!bg-violet-700 !border-0 text-white font-bold shadow-md shadow-violet-600/10 hover:shadow-violet-600/20 transition-all active:scale-98"
-          @click="handleRecordPayment"
-        />
-      </div>
-
-      <div
-        v-else-if="unpaidIurans.length === 0"
-        class="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl text-center flex items-center justify-center gap-2 shadow-sm select-none"
-      >
-        <i class="pi pi-verified text-lg text-emerald-600"></i>
-        <p class="text-xs text-emerald-700 font-bold">
-          Semua iuran terhubung untuk bulan ini telah dilunasi!
-        </p>
-      </div>
-    </div>
-
-    <template #footer>
-      <div class="flex justify-end pt-4">
-        <Button
-          label="Tutup"
-          severity="secondary"
-          class="hover:bg-slate-100 text-slate-600 border-slate-200 !rounded-xl !py-2"
-          @click="isPaymentDialogOpen = false"
-        />
-      </div>
-    </template>
-  </Dialog>
-
-  <!-- Dialog Bulk Payment Info & Action -->
-  <Dialog
+  <BulkPaymentDialog
     v-model:visible="isBulkPaymentDialogOpen"
-    :header="`Pencatatan Iuran Cepat: ${bulkSelectedWarga?.name || ''}`"
-    modal
-    class="w-full max-w-lg bg-white border border-slate-200 rounded-2xl text-slate-900"
-  >
-    <div class="space-y-6 pt-4">
-      <!-- Resident Info Summary -->
-      <div
-        class="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex justify-between items-center relative overflow-hidden"
-      >
-        <div class="absolute -right-3 -top-3 text-slate-100 select-none">
-          <i class="pi pi-bolt text-6xl"></i>
-        </div>
-        <div class="relative z-10">
-          <p
-            class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
-          >
-            Warga & No. Rumah
-          </p>
-          <p class="font-bold text-slate-800 text-sm mt-0.5">
-            {{ bulkSelectedWarga?.name }}
-          </p>
-          <p class="text-xs text-slate-500 font-mono mt-0.5">
-            Rumah: No. {{ bulkSelectedWarga?.houseNumber }}
-          </p>
-        </div>
-        <div class="text-right relative z-10">
-          <p
-            class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
-          >
-            Jumlah Terpilih
-          </p>
-          <span
-            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-violet-50 text-violet-700 text-xs font-bold border border-violet-100 mt-1"
-          >
-            <i class="pi pi-check-square text-[10px]"></i>
-            {{ bulkSelectedCount }} Iuran
-          </span>
-        </div>
-      </div>
+    :warga="bulkSelectedWarga"
+    :year="selectedYear"
+    :kas-accounts="financeStore.kasAccounts"
+    :loading="submitLoading"
+    :error-message="errorMessage"
+    @pay="handleBulkPay"
+  />
 
-      <!-- Error Message Banner -->
-      <div
-        v-if="errorMessage"
-        class="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-2xl text-xs flex items-start gap-2.5 shadow-sm"
-      >
-        <i
-          class="pi pi-exclamation-circle text-base text-rose-600 mt-0.5 flex-shrink-0"
-        ></i>
-        <div class="flex-1">
-          <p class="font-bold text-rose-800">Gagal Menyimpan Pembayaran</p>
-          <p class="mt-0.5">{{ errorMessage }}</p>
-        </div>
-      </div>
-
-      <!-- Quick Action Buttons -->
-      <div class="flex flex-wrap gap-2">
-        <Button
-          label="Centang Semua"
-          icon="pi pi-check-square"
-          severity="secondary"
-          size="small"
-          outlined
-          class="!rounded-xl text-xs"
-          @click="selectAllBulkIurans"
-        />
-        <Button
-          label="Centang s.d. Bulan Ini"
-          icon="pi pi-calendar"
-          severity="secondary"
-          size="small"
-          outlined
-          class="!rounded-xl text-xs"
-          @click="selectUpToCurrentMonth"
-        />
-        <Button
-          v-if="bulkSelectedCount > 0"
-          label="Batal Semua"
-          icon="pi pi-times"
-          severity="danger"
-          size="small"
-          outlined
-          class="!rounded-xl text-xs"
-          @click="clearAllBulkIurans"
-        />
-      </div>
-
-      <!-- Scrollable List of Months with Unpaid Mappings -->
-      <div class="space-y-3 max-h-[300px] overflow-y-auto pr-1">
-        <div
-          v-for="m in bulkUnpaidMonthsList"
-          :key="m.value"
-          class="border border-slate-100 rounded-2xl p-4 bg-slate-50/50 hover:bg-slate-50 transition-colors"
-        >
-          <div
-            class="flex items-center justify-between mb-3 border-b border-slate-200/50 pb-2"
-          >
-            <span
-              class="text-xs font-extrabold text-slate-800 flex items-center gap-1.5"
-            >
-              <i class="pi pi-calendar text-[10px] text-slate-400"></i>
-              {{ m.name }} {{ selectedYear }}
-            </span>
-            <button
-              type="button"
-              class="text-[10px] text-violet-600 font-extrabold hover:text-violet-800 transition-colors cursor-pointer"
-              @click="toggleMonthAllIurans(m.value)"
-            >
-              {{
-                isAllSelectedForMonth(m.value) ? 'Batal Centang' : 'Pilih Semua'
-              }}
-            </button>
-          </div>
-
-          <div class="space-y-2">
-            <div
-              v-for="ib in getUnpaidIuransForMonth(bulkSelectedWarga, m.value)"
-              :key="ib.jenisIuran.id"
-              class="flex items-center justify-between text-xs py-1"
-            >
-              <label
-                class="flex items-center gap-2.5 text-slate-700 cursor-pointer select-none"
-              >
-                <input
-                  v-model="bulkSelectedIurans[`${m.value}-${ib.jenisIuran.id}`]"
-                  type="checkbox"
-                  class="rounded border-slate-300 text-violet-600 focus:ring-violet-500/20 h-4 w-4 cursor-pointer"
-                />
-                <span class="font-medium text-slate-800">{{
-                  ib.jenisIuran.name
-                }}</span>
-              </label>
-              <span class="font-bold text-slate-900">{{
-                formatCurrency(ib.customAmount ?? ib.jenisIuran.defaultAmount)
-              }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Account Selection & Total Summary -->
-      <div
-        v-if="bulkSelectedCount > 0"
-        class="bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-4 shadow-sm"
-      >
-        <!-- Account Dropdown -->
-        <div class="flex flex-col gap-1.5">
-          <label
-            class="text-[10px] font-bold text-slate-500 uppercase tracking-wider"
-          >
-            Akun Kas Penerima
-          </label>
-          <Select
-            v-model="bulkKasAccountId"
-            :options="financeStore.kasAccounts"
-            option-value="id"
-            option-label="name"
-            placeholder="Pilih Rekening Kas"
-            class="w-full !bg-white !border-slate-200 !text-slate-900 rounded-xl text-xs shadow-sm focus:!border-violet-500 focus:!ring-violet-500/20"
-          />
-        </div>
-
-        <!-- Total Calculation -->
-        <div
-          class="flex items-center justify-between pt-2 border-t border-slate-200/50"
-        >
-          <span class="text-xs font-bold text-slate-500"
-            >Total Belanja Iuran:</span
-          >
-          <span class="text-base font-extrabold text-violet-600">
-            {{ formatCurrency(bulkTotalAmount) }}
-          </span>
-        </div>
-
-        <Button
-          :loading="submitLoading"
-          label="Catat Pembayaran Massal"
-          icon="pi pi-credit-card"
-          size="small"
-          class="w-full !py-2.5 !rounded-xl !bg-violet-600 hover:!bg-violet-700 !border-0 text-white font-bold shadow-md shadow-violet-600/10 hover:shadow-violet-600/20 transition-all active:scale-98"
-          @click="handleRecordBulkPayment"
-        />
-      </div>
-
-      <div
-        v-else
-        class="bg-slate-50 border border-slate-200 border-dashed p-6 rounded-2xl text-center flex flex-col items-center justify-center gap-2 select-none"
-      >
-        <i class="pi pi-check-square text-lg text-slate-300"></i>
-        <p class="text-xs text-slate-500">
-          Silakan centang bulan/iuran yang ingin dibayar di atas.
-        </p>
-      </div>
-    </div>
-
-    <template #footer>
-      <div class="flex justify-end pt-4">
-        <Button
-          label="Batal"
-          severity="secondary"
-          class="hover:bg-slate-100 text-slate-600 border-slate-200 !rounded-xl !py-2"
-          @click="isBulkPaymentDialogOpen = false"
-        />
-      </div>
-    </template>
-  </Dialog>
-
-  <!-- Dialog Bulk All Payment (Bayar Massal Warga) -->
-  <Dialog
+  <BulkAllPaymentDialog
     v-model:visible="isBulkAllPaymentDialogOpen"
-    header="Pencatatan Iuran Massal Warga"
-    modal
-    class="w-full max-w-4xl bg-white border border-slate-200 rounded-2xl text-slate-900"
-  >
-    <div class="space-y-6 pt-4">
-      <!-- Info Banner -->
-      <div
-        class="bg-violet-50/50 border border-violet-100 p-4 rounded-2xl flex items-start gap-3 relative overflow-hidden"
-      >
-        <div class="absolute -right-3 -top-3 text-violet-100/30 select-none">
-          <i class="pi pi-users text-6xl"></i>
-        </div>
-        <i
-          class="pi pi-info-circle text-violet-600 text-lg mt-0.5 flex-shrink-0"
-        ></i>
-        <div class="relative z-10 text-xs text-slate-600 leading-relaxed">
-          <p class="font-bold text-violet-800 mb-0.5">
-            Metode Bayar Cepat Massal
-          </p>
-          Mencatat pembayaran untuk satu jenis iuran bulanan bagi beberapa warga
-          sekaligus pada periode terpilih. Sistem akan mendeteksi nominal kustom
-          masing-masing warga secara otomatis.
-        </div>
-      </div>
+    :rekap-list="wargaStore.rekapList"
+    :iuran-options="bulkAllIuranOptions"
+    :kas-accounts="financeStore.kasAccounts"
+    :year="selectedYear"
+    :loading="submitLoading"
+    :error-message="bulkAllErrorMessage"
+    @pay="handleBulkAllPay"
+  />
 
-      <!-- Error Message Banner -->
-      <div
-        v-if="bulkAllErrorMessage"
-        class="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-2xl text-xs flex items-start gap-2.5 shadow-sm"
-      >
-        <i
-          class="pi pi-exclamation-circle text-base text-rose-600 mt-0.5 flex-shrink-0"
-        ></i>
-        <div class="flex-1">
-          <p class="font-bold text-rose-800">
-            Gagal Memproses Pembayaran Massal
-          </p>
-          <p class="mt-0.5">{{ bulkAllErrorMessage }}</p>
-        </div>
-      </div>
-
-      <!-- Widescreen Layout: Left Column (Config & Summary) | Right Column (Residents Checklist Grid) -->
-      <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
-        <!-- Left Side: Config & Summary -->
-        <div class="md:col-span-5 space-y-4">
-          <div
-            class="bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-4 shadow-sm"
-          >
-            <h3
-              class="text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-slate-200 pb-2 flex items-center gap-1.5"
-            >
-              <i class="pi pi-cog text-slate-400"></i>
-              Konfigurasi Pembayaran
-            </h3>
-
-            <!-- Jenis Iuran -->
-            <div class="flex flex-col gap-1.5">
-              <label
-                class="text-[10px] font-bold text-slate-500 uppercase tracking-wider"
-              >
-                Jenis Iuran Bulanan
-              </label>
-              <Select
-                v-model="bulkAllSelectedIuranId"
-                :options="bulkAllIuranOptions"
-                option-value="id"
-                option-label="name"
-                placeholder="Pilih Iuran"
-                class="w-full !bg-white !border-slate-200 !text-slate-900 rounded-xl text-xs shadow-sm focus:!border-violet-500 focus:!ring-violet-500/20"
-              />
-            </div>
-
-            <!-- Bulan -->
-            <div class="flex flex-col gap-1.5">
-              <label
-                class="text-[10px] font-bold text-slate-500 uppercase tracking-wider"
-              >
-                Pilih Bulan
-              </label>
-              <Select
-                v-model="bulkAllSelectedMonth"
-                :options="monthsList"
-                option-value="value"
-                option-label="nameFull"
-                placeholder="Pilih Bulan"
-                class="w-full !bg-white !border-slate-200 !text-slate-900 rounded-xl text-xs shadow-sm focus:!border-violet-500 focus:!ring-violet-500/20"
-              />
-            </div>
-
-            <!-- Akun Kas Penerima -->
-            <div class="flex flex-col gap-1.5 pt-1">
-              <label
-                class="text-[10px] font-bold text-slate-500 uppercase tracking-wider"
-              >
-                Akun Kas Penerima
-              </label>
-              <Select
-                v-model="bulkAllKasAccountId"
-                :options="financeStore.kasAccounts"
-                option-value="id"
-                option-label="name"
-                placeholder="Pilih Rekening Kas"
-                class="w-full !bg-white !border-slate-200 !text-slate-900 rounded-xl text-xs shadow-sm focus:!border-violet-500 focus:!ring-violet-500/20"
-              />
-            </div>
-          </div>
-
-          <!-- Total Summary Box -->
-          <div
-            v-if="bulkAllSelectedCount > 0"
-            class="bg-violet-50/25 border border-violet-100 p-5 rounded-2xl space-y-4 shadow-sm"
-          >
-            <div class="flex items-center justify-between pt-1">
-              <div class="flex flex-col">
-                <span class="text-xs font-bold text-slate-500"
-                  >Total Transaksi:</span
-                >
-                <span class="text-[10px] text-slate-400 font-medium"
-                  >({{ bulkAllSelectedCount }} Warga Terpilih)</span
-                >
-              </div>
-              <span class="text-lg font-extrabold text-violet-600">
-                {{ formatCurrency(bulkAllTotalAmount) }}
-              </span>
-            </div>
-
-            <Button
-              :loading="submitLoading"
-              label="Catat Pembayaran Massal"
-              icon="pi pi-credit-card"
-              size="small"
-              class="w-full !py-2.5 !rounded-xl !bg-violet-600 hover:!bg-violet-700 !border-0 text-white font-bold shadow-md shadow-violet-600/10 hover:shadow-violet-600/20 transition-all active:scale-98"
-              @click="handleRecordBulkAllPayment"
-            />
-          </div>
-        </div>
-
-        <!-- Right Side: Residents Checklist Grid -->
-        <div class="md:col-span-7 flex flex-col space-y-3">
-          <div class="flex items-center justify-between">
-            <h4
-              class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5 select-none"
-            >
-              <i class="pi pi-user-check text-violet-500"></i>
-              Daftar Warga Terhutang
-            </h4>
-            <button
-              v-if="unpaidWargaList.length > 0"
-              type="button"
-              class="text-[10px] text-violet-600 font-extrabold hover:text-violet-800 transition-colors cursor-pointer"
-              @click="toggleBulkAllWargaSelection"
-            >
-              {{ isAllBulkAllWargaSelected ? 'Batal Semua' : 'Pilih Semua' }}
-            </button>
-          </div>
-
-          <!-- The Grid Container -->
-          <div v-if="bulkAllSelectedIuranId && bulkAllSelectedMonth !== null">
-            <div
-              v-if="unpaidWargaList.length > 0"
-              class="border border-slate-100 rounded-2xl max-h-[380px] overflow-y-auto bg-slate-50/30 p-3 grid grid-cols-1 sm:grid-cols-2 gap-3 pr-1"
-            >
-              <div
-                v-for="warga in unpaidWargaList"
-                :key="warga.id"
-                class="flex items-start justify-between p-3.5 bg-white border rounded-2xl shadow-sm hover:border-violet-300 hover:shadow transition-all cursor-pointer relative group"
-                :class="
-                  bulkAllWargaChecklist[warga.id]
-                    ? 'border-violet-500/50 bg-violet-50/5'
-                    : 'border-slate-100'
-                "
-                @click="
-                  bulkAllWargaChecklist[warga.id] =
-                    !bulkAllWargaChecklist[warga.id]
-                "
-              >
-                <div class="flex items-start gap-3 flex-1 min-w-0">
-                  <div class="pt-0.5">
-                    <input
-                      v-model="bulkAllWargaChecklist[warga.id]"
-                      type="checkbox"
-                      class="rounded border-slate-300 text-violet-600 focus:ring-violet-500/20 h-4 w-4 cursor-pointer"
-                      @click.stop
-                    />
-                  </div>
-                  <div class="min-w-0">
-                    <p
-                      class="font-extrabold text-slate-800 text-xs truncate group-hover:text-violet-700 transition-colors"
-                    >
-                      {{ warga.name }}
-                    </p>
-                    <span
-                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 text-[9px] font-bold text-slate-500 mt-1"
-                    >
-                      Rumah: {{ warga.houseNumber }}
-                    </span>
-                  </div>
-                </div>
-
-                <span
-                  class="font-bold text-slate-900 text-xs text-right pl-2 shrink-0"
-                >
-                  {{
-                    formatCurrency(
-                      warga.iuranBulanan.find(
-                        (ib: any) =>
-                          ib.jenisIuran.id === bulkAllSelectedIuranId,
-                      )?.customAmount ??
-                        warga.iuranBulanan.find(
-                          (ib: any) =>
-                            ib.jenisIuran.id === bulkAllSelectedIuranId,
-                        )?.jenisIuran.defaultAmount ??
-                        0,
-                    )
-                  }}
-                </span>
-              </div>
-            </div>
-
-            <!-- Empty State -->
-            <div
-              v-else
-              class="text-center py-16 bg-slate-50 border border-slate-200 border-dashed rounded-2xl text-slate-400 text-xs flex flex-col items-center justify-center gap-2 select-none"
-            >
-              <i class="pi pi-verified text-2xl text-emerald-600"></i>
-              <span class="font-extrabold text-emerald-700 text-sm"
-                >Semua Lunas!</span
-              >
-              <span class="text-slate-400 text-[10px]"
-                >Seluruh warga telah melunasi iuran ini untuk periode
-                tersebut.</span
-              >
-            </div>
-          </div>
-
-          <!-- Configuration Not Chosen State -->
-          <div
-            v-else
-            class="text-center py-16 bg-slate-50 border border-slate-100 border-dashed rounded-2xl text-slate-400 text-xs flex flex-col items-center justify-center gap-2 select-none"
-          >
-            <i class="pi pi-calendar text-xl text-slate-300"></i>
-            <span>Silakan tentukan Jenis Iuran dan Bulan terlebih dahulu.</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <template #footer>
-      <div class="flex justify-end pt-4">
-        <Button
-          label="Batal"
-          severity="secondary"
-          class="hover:bg-slate-100 text-slate-600 border-slate-200 !rounded-xl !py-2"
-          @click="isBulkAllPaymentDialogOpen = false"
-        />
-      </div>
-    </template>
-  </Dialog>
-
-  <!-- Dialog Preview & Edit WhatsApp Message -->
-  <Dialog
+  <WaPreviewDialog
     v-model:visible="isWaPreviewOpen"
-    header="Pratinjau Kuitansi WhatsApp"
-    modal
-    class="w-full max-w-md bg-white border border-slate-200 rounded-2xl text-slate-900"
-  >
-    <div class="space-y-4 pt-4">
-      <!-- Target Phone Number -->
-      <div class="flex flex-col gap-1.5">
-        <label
-          class="text-[10px] font-bold text-slate-500 uppercase tracking-wider"
-          >Nomor Tujuan WhatsApp</label
-        >
-        <div class="relative flex items-center">
-          <InputText
-            v-model="waTargetPhone"
-            placeholder="Contoh: 08123456789"
-            class="w-full !bg-white !border-slate-200 !text-slate-900 rounded-xl text-xs pl-8 shadow-sm focus:!border-emerald-500 focus:!ring-emerald-500/20"
-          />
-          <i class="pi pi-phone absolute left-3 text-slate-400 text-xs"></i>
-        </div>
-        <p class="text-[9px] text-slate-400 leading-tight">
-          Kosongkan nomor jika ingin memicu WhatsApp share picker manual (pilih
-          kontak di aplikasi).
-        </p>
-      </div>
-
-      <!-- WhatsApp Preview Mockup Window -->
-      <div
-        class="flex flex-col border border-slate-200 rounded-2xl overflow-hidden shadow-sm"
-      >
-        <!-- Mockup WhatsApp Header -->
-        <div
-          class="bg-[#075e54] text-white px-4 py-2.5 flex items-center gap-2.5 select-none"
-        >
-          <div
-            class="h-8 w-8 rounded-full bg-emerald-500/20 flex items-center justify-center border border-white/10 flex-shrink-0"
-          >
-            <i class="pi pi-user text-sm text-white"></i>
-          </div>
-          <div class="min-w-0 flex-1">
-            <h5 class="text-xs font-bold leading-tight truncate">
-              {{ waTargetWarga?.name || 'Warga' }}
-            </h5>
-            <p class="text-[8px] text-emerald-200 leading-none">Online</p>
-          </div>
-          <div class="flex gap-3 text-white/80">
-            <i class="pi pi-video text-xs"></i>
-            <i class="pi pi-phone text-xs"></i>
-            <i class="pi pi-ellipsis-v text-xs"></i>
-          </div>
-        </div>
-
-        <!-- Mockup WhatsApp Body / Chat Area -->
-        <div
-          class="bg-[#efeae2] p-4 min-h-[220px] flex flex-col justify-end relative overflow-y-auto"
-        >
-          <!-- Chat Bubble -->
-          <div
-            class="bg-[#dcf8c6] border border-[#c1e8a8] text-slate-800 rounded-2xl rounded-tr-none p-3 max-w-[85%] self-end shadow-sm text-[11px] font-sans whitespace-pre-wrap leading-relaxed relative"
-          >
-            <div
-              class="absolute -right-2 top-0 border-[6px] border-transparent border-l-[#dcf8c6] border-t-[#dcf8c6]"
-            ></div>
-
-            <!-- Real editable Textarea inside the bubble so they can interact directly -->
-            <textarea
-              v-model="waPreviewText"
-              rows="8"
-              class="w-full bg-transparent border-0 resize-none p-0 focus:ring-0 focus:outline-none text-[11px] font-mono leading-relaxed text-slate-800"
-              placeholder="Tulis pesan kuitansi di sini..."
-            ></textarea>
-
-            <div
-              class="text-right text-[8px] text-slate-500 mt-1 flex items-center justify-end gap-1 select-none"
-            >
-              <span>{{
-                new Date().toLocaleTimeString('id-ID', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })
-              }}</span>
-              <i class="pi pi-check text-[8px] text-[#34b7f1]"></i>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <template #footer>
-      <div class="flex justify-end gap-3 pt-4">
-        <Button
-          label="Batal"
-          severity="secondary"
-          text
-          class="!text-slate-500 hover:!bg-slate-100 !rounded-xl !py-2"
-          @click="isWaPreviewOpen = false"
-        />
-        <Button
-          label="Kirim ke WhatsApp"
-          icon="pi pi-whatsapp"
-          class="!bg-emerald-600 hover:!bg-emerald-700 !border-0 text-white font-bold !rounded-xl !py-2 shadow-md shadow-emerald-600/10 hover:shadow-emerald-600/20 transition-all active:scale-98"
-          @click="sendWhatsAppReceipt"
-        />
-      </div>
-    </template>
-  </Dialog>
+    :payment="selectedWaPayment"
+    :warga="selectedWaWarga"
+    :month="selectedWaMonth"
+    :year="selectedWaYear"
+    :receipt-template="receiptTemplate"
+  />
 </template>

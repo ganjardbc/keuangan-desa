@@ -4,14 +4,15 @@ import { useFinanceStore } from '../stores/finance'
 import { useAuthStore } from '../../../modules/auth/stores/auth'
 import TemplateList from '../../../components/TemplateList.vue'
 import StatsCards from '../components/StatsCards.vue'
-import TransactionForm from '../components/TransactionForm.vue'
 import Button from 'primevue/button'
-import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import InputGroup from 'primevue/inputgroup'
 import InputGroupAddon from 'primevue/inputgroupaddon'
 import Select from 'primevue/select'
 import Paginator from 'primevue/paginator'
+
+// Import new Dialog component
+import TransactionDialog from '../components/TransactionDialog.vue'
 
 const financeStore = useFinanceStore()
 const authStore = useAuthStore()
@@ -325,18 +326,10 @@ const formatCurrency = (val: number) => {
     </div>
   </TemplateList>
 
-  <!-- Unified Dialog Form -->
-  <Dialog
+  <!-- Transaction Dialog -->
+  <TransactionDialog
     v-model:visible="isDialogOpen"
-    :header="editData ? 'Ubah Transaksi' : 'Catat Transaksi Baru'"
-    modal
-    :dismissable-mask="true"
-    class="w-full max-w-2xl bg-white border border-slate-200 rounded-2xl text-slate-900 animate-fade-in"
-  >
-    <TransactionForm
-      :edit-data="editData"
-      @saved="handleSaved"
-      @cancel="isDialogOpen = false"
-    />
-  </Dialog>
+    :edit-data="editData"
+    @saved="handleSaved"
+  />
 </template>

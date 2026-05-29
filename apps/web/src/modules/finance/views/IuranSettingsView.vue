@@ -5,12 +5,12 @@ import { useAuthStore } from '../../../modules/auth/stores/auth'
 import TemplateList from '../../../components/TemplateList.vue'
 import Card from 'primevue/card'
 import Button from 'primevue/button'
-import Dialog from 'primevue/dialog'
-import InputText from 'primevue/inputtext'
-import InputNumber from 'primevue/inputnumber'
-import Select from 'primevue/select'
 import Tag from 'primevue/tag'
 import Paginator from 'primevue/paginator'
+
+// Import new Dialog components
+import JenisIuranDialog from '../components/JenisIuranDialog.vue'
+import ConfirmDeleteDialog from '../components/ConfirmDeleteDialog.vue'
 
 const jenisIuranStore = useJenisIuranStore()
 const authStore = useAuthStore()
@@ -19,15 +19,11 @@ const authStore = useAuthStore()
 const isDialogOpen = ref(false)
 const isEditing = ref(false)
 const currentId = ref<string | null>(null)
+const selectedIuran = ref<JenisIuran | null>(null)
 
 // Confirm Delete State
 const isConfirmDeleteOpen = ref(false)
 const deleteIuranId = ref<string | null>(null)
-
-// State Form
-const name = ref('')
-const defaultAmount = ref<number | null>(null)
-const period = ref('BULANAN')
 
 const periods = ['BULANAN', 'TAHUNAN', 'INSIDENTAL']
 
@@ -47,30 +43,22 @@ onMounted(() => {
 const openAddDialog = () => {
   isEditing.value = false
   currentId.value = null
-  name.value = ''
-  defaultAmount.value = null
-  period.value = 'BULANAN'
+  selectedIuran.value = null
   isDialogOpen.value = true
 }
 
 const openEditDialog = (item: JenisIuran) => {
   isEditing.value = true
   currentId.value = item.id
-  name.value = item.name
-  defaultAmount.value = item.defaultAmount
-  period.value = item.period
+  selectedIuran.value = item
   isDialogOpen.value = true
 }
 
-const handleSave = async () => {
-  if (!name.value || !defaultAmount.value) return
-
-  const payload = {
-    name: name.value,
-    defaultAmount: defaultAmount.value,
-    period: period.value,
-  }
-
+const handleSave = async (payload: {
+  name: string
+  defaultAmount: number
+  period: string
+}) => {
   let success = false
   if (isEditing.value && currentId.value) {
     success = await jenisIuranStore.updateJenisIuran(currentId.value, payload)
@@ -182,111 +170,21 @@ const formatCurrency = (val: number) => {
     </div>
   </TemplateList>
 
-  <!-- Dialog Add/Edit -->
-  <Dialog
+  <!-- Jenis Iuran Dialog -->
+  <JenisIuranDialog
     v-model:visible="isDialogOpen"
-    :header="isEditing ? 'Edit Kategori Iuran' : 'Tambah Kategori Iuran'"
-    modal
-    class="w-full max-w-md bg-white border border-slate-200 rounded-2xl text-slate-900"
-  >
-    <div class="space-y-4 pt-4">
-      <div class="flex flex-col gap-2">
-        <label
-          class="text-xs font-semibold text-slate-500 uppercase tracking-wider"
-          >Nama Iuran</label
-        >
-        <InputText
-          v-model="name"
-          placeholder="Contoh: Iuran Kebersihan Bulanan"
-          class="w-full !bg-white !border-slate-200 !text-slate-900 placeholder-slate-400 rounded-xl text-sm"
-          required
-        />
-      </div>
+    :is-editing="isEditing"
+    :iuran="selectedIuran"
+    :periods="periods"
+    @save="handleSave"
+  />
 
-      <div class="flex flex-col gap-2">
-        <label
-          class="text-xs font-semibold text-slate-500 uppercase tracking-wider"
-          >Nominal Standar (Rp)</label
-        >
-        <InputNumber
-          v-model="defaultAmount"
-          placeholder="Contoh: 50000"
-          mode="currency"
-          currency="IDR"
-          locale="id-ID"
-          :min="0"
-          class="w-full"
-          input-class="w-full !bg-white !border-slate-200 !text-slate-900 placeholder-slate-400 rounded-xl text-sm"
-          required
-        />
-      </div>
-
-      <div class="flex flex-col gap-2">
-        <label
-          class="text-xs font-semibold text-slate-500 uppercase tracking-wider"
-          >Periode Tagihan</label
-        >
-        <Select
-          v-model="period"
-          :options="periods"
-          placeholder="Pilih Periode"
-          class="w-full !bg-white !border-slate-200 !text-slate-900 rounded-xl text-sm"
-          required
-        />
-      </div>
-    </div>
-
-    <template #footer>
-      <div class="flex items-center gap-3 justify-end mt-6">
-        <Button
-          label="Batal"
-          severity="secondary"
-          text
-          @click="isDialogOpen = false"
-        />
-        <Button label="Simpan" @click="handleSave" />
-      </div>
-    </template>
-  </Dialog>
-
-  <!-- Dialog Konfirmasi Hapus -->
-  <Dialog
+  <!-- Confirm Delete Dialog -->
+  <ConfirmDeleteDialog
     v-model:visible="isConfirmDeleteOpen"
-    header="Konfirmasi Hapus"
-    modal
-    class="w-full max-w-sm bg-white border border-slate-200 rounded-2xl text-slate-900"
-  >
-    <div class="pt-4 flex flex-col items-center text-center gap-3">
-      <div
-        class="h-12 w-12 rounded-full bg-rose-50 flex items-center justify-center border border-rose-100 text-rose-600"
-      >
-        <i class="pi pi-exclamation-triangle text-xl"></i>
-      </div>
-      <div class="space-y-1">
-        <p class="text-sm font-bold text-slate-900">Apakah Anda yakin?</p>
-        <p class="text-xs text-slate-500 leading-relaxed">
-          Tindakan ini akan menghapus jenis iuran ini beserta pemetaan iuran
-          warga yang bersangkutan secara permanen.
-        </p>
-      </div>
-    </div>
-
-    <template #footer>
-      <div class="flex items-center gap-3 justify-center mt-6 w-full">
-        <Button
-          label="Batal"
-          severity="secondary"
-          text
-          class="w-full"
-          @click="isConfirmDeleteOpen = false"
-        />
-        <Button
-          label="Hapus"
-          severity="danger"
-          class="w-full"
-          @click="confirmDelete"
-        />
-      </div>
-    </template>
-  </Dialog>
+    title="Apakah Anda yakin?"
+    description="Tindakan ini akan menghapus jenis iuran ini beserta pemetaan iuran warga yang bersangkutan secara permanen."
+    :error-message="null"
+    @confirm="confirmDelete"
+  />
 </template>

@@ -150,7 +150,7 @@ const filteredMenuItems = computed(() => {
         "
       >
         <div class="sidebar-header">
-          <div class="sidebar-logo">
+          <div class="sidebar-logo bg-primary-500">
             <i class="pi pi-wallet text-white text-lg"></i>
           </div>
           <div class="flex-1">
@@ -175,7 +175,7 @@ const filteredMenuItems = computed(() => {
             class="nav-link"
             :class="
               isActive(item.to)
-                ? 'bg-violet-50 text-violet-700 border border-violet-100'
+                ? 'bg-primary-50 text-primary-700 border border-primary-100'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent'
             "
             @click="isSidebarOpen = false"
@@ -213,7 +213,7 @@ const filteredMenuItems = computed(() => {
                   @click="router.push('/dashboard/profile')"
                 >
                   <div
-                    class="h-8 w-8 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-sm select-none"
+                    class="h-8 w-8 rounded-full bg-primary-500 flex items-center justify-center text-white font-bold text-sm shadow-sm select-none"
                   >
                     {{ authStore.user?.name?.charAt(0).toUpperCase() || 'U' }}
                   </div>
@@ -277,8 +277,7 @@ const filteredMenuItems = computed(() => {
 }
 
 .sidebar-logo {
-  @apply h-10 w-10 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-500
-    flex items-center justify-center shadow-lg shadow-indigo-500/20;
+  @apply h-10 w-10 rounded-xl flex items-center justify-center;
 }
 
 .sidebar-title {

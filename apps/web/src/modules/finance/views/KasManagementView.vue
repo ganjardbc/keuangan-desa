@@ -4,28 +4,25 @@ import { useFinanceStore, type KasAccount } from '../stores/finance'
 import { useAuthStore } from '../../../modules/auth/stores/auth'
 import TemplateList from '../../../components/TemplateList.vue'
 import Button from 'primevue/button'
-import Dialog from 'primevue/dialog'
-import InputText from 'primevue/inputtext'
-import InputNumber from 'primevue/inputnumber'
 import Paginator from 'primevue/paginator'
+
+// Import new Dialog components
+import KasAccountDialog from '../components/KasAccountDialog.vue'
+import ConfirmDeleteDialog from '../components/ConfirmDeleteDialog.vue'
 
 const financeStore = useFinanceStore()
 const authStore = useAuthStore()
 
-// State Dialog
+// State Dialogs
 const isDialogOpen = ref(false)
 const isEditing = ref(false)
 const currentId = ref<string | null>(null)
+const selectedAccount = ref<KasAccount | null>(null)
 
 // Confirm Delete State
 const isConfirmDeleteOpen = ref(false)
 const deleteAccountId = ref<string | null>(null)
 const deleteError = ref<string | null>(null)
-
-// State Form
-const name = ref('')
-const accountNumber = ref('')
-const balance = ref<number | null>(0)
 
 // Luxury credit-card gradients for visual variety
 const gradients = [
@@ -51,30 +48,22 @@ onMounted(() => {
 const openAddDialog = () => {
   isEditing.value = false
   currentId.value = null
-  name.value = ''
-  accountNumber.value = ''
-  balance.value = 0
+  selectedAccount.value = null
   isDialogOpen.value = true
 }
 
 const openEditDialog = (account: KasAccount) => {
   isEditing.value = true
   currentId.value = account.id
-  name.value = account.name
-  accountNumber.value = account.accountNumber || ''
-  balance.value = account.balance
+  selectedAccount.value = account
   isDialogOpen.value = true
 }
 
-const handleSave = async () => {
-  if (!name.value) return
-
-  const payload = {
-    name: name.value,
-    accountNumber: accountNumber.value || undefined,
-    balance: balance.value ?? 0,
-  }
-
+const handleSave = async (payload: {
+  name: string
+  accountNumber: string
+  balance: number
+}) => {
   let success = false
   if (isEditing.value && currentId.value) {
     success = await financeStore.updateKasAccount(currentId.value, payload)
@@ -229,120 +218,18 @@ const formatCurrency = (val: number) => {
     </div>
   </TemplateList>
 
-  <!-- Dialog Add/Edit Account -->
-  <Dialog
+  <!-- Kas Account Dialog -->
+  <KasAccountDialog
     v-model:visible="isDialogOpen"
-    :header="isEditing ? 'Edit Akun Kas' : 'Tambah Akun Kas Baru'"
-    modal
-    class="w-full max-w-md bg-white border border-slate-200 rounded-2xl text-slate-900"
-  >
-    <div class="space-y-4 pt-4">
-      <!-- Nama Akun Kas -->
-      <div class="flex flex-col gap-2">
-        <label
-          class="text-xs font-semibold text-slate-500 uppercase tracking-wider"
-          >Nama Akun Kas / Bank</label
-        >
-        <InputText
-          v-model="name"
-          placeholder="Contoh: Bank Mandiri RT, Kas Tunai Bendahara"
-          class="w-full !bg-white !border-slate-200 !text-slate-900 placeholder-slate-400 rounded-xl text-sm"
-          required
-        />
-      </div>
+    :is-editing="isEditing"
+    :account="selectedAccount"
+    @save="handleSave"
+  />
 
-      <!-- Nomor Rekening -->
-      <div class="flex flex-col gap-2">
-        <label
-          class="text-xs font-semibold text-slate-500 uppercase tracking-wider"
-          >Nomor Rekening / Catatan (Opsional)</label
-        >
-        <InputText
-          v-model="accountNumber"
-          placeholder="Contoh: 123-00-123456-7 atau Kas Box"
-          class="w-full !bg-white !border-slate-200 !text-slate-900 placeholder-slate-400 rounded-xl text-sm"
-        />
-      </div>
-
-      <!-- Saldo Awal -->
-      <div class="flex flex-col gap-2">
-        <label
-          class="text-xs font-semibold text-slate-500 uppercase tracking-wider"
-          >Saldo (Rp)</label
-        >
-        <InputNumber
-          v-model="balance"
-          placeholder="Contoh: 500000"
-          mode="currency"
-          currency="IDR"
-          locale="id-ID"
-          :min="0"
-          class="w-full"
-          input-class="w-full !bg-white !border-slate-200 !text-slate-900 placeholder-slate-400 rounded-xl text-sm"
-          required
-        />
-        <p class="text-[10px] text-amber-600 leading-relaxed font-semibold">
-          * Perhatian: Mengubah nominal saldo di sini akan merubah total kas
-          secara langsung di luar pencatatan mutasi transaksi.
-        </p>
-      </div>
-    </div>
-
-    <!-- Footer Action -->
-    <template #footer>
-      <div class="flex items-center gap-3 justify-end mt-6">
-        <Button
-          label="Batal"
-          severity="secondary"
-          text
-          @click="isDialogOpen = false"
-        />
-        <Button label="Simpan" @click="handleSave" />
-      </div>
-    </template>
-  </Dialog>
-
-  <!-- Dialog Konfirmasi Hapus -->
-  <Dialog
+  <!-- Confirm Delete Dialog -->
+  <ConfirmDeleteDialog
     v-model:visible="isConfirmDeleteOpen"
-    header="Konfirmasi Hapus"
-    modal
-    class="w-full max-w-sm bg-white border border-slate-200 rounded-2xl text-slate-900"
-  >
-    <div class="pt-4 flex flex-col items-center text-center gap-3">
-      <div
-        class="h-12 w-12 rounded-full bg-rose-50 flex items-center justify-center border border-rose-100 text-rose-600"
-      >
-        <i class="pi pi-exclamation-triangle text-xl"></i>
-      </div>
-      <div class="space-y-1">
-        <p class="text-sm font-bold text-slate-900">Apakah Anda yakin?</p>
-        <p class="text-xs text-slate-500 leading-relaxed">
-          Tindakan ini akan menghapus akun kas secara permanen. Akun yang
-          memiliki riwayat transaksi tidak dapat dihapus.
-        </p>
-      </div>
-      <p v-if="deleteError" class="text-xs text-rose-600 font-semibold mt-2">
-        {{ deleteError }}
-      </p>
-    </div>
-
-    <template #footer>
-      <div class="flex items-center gap-3 justify-center mt-6 w-full">
-        <Button
-          label="Batal"
-          severity="secondary"
-          text
-          class="w-full"
-          @click="isConfirmDeleteOpen = false"
-        />
-        <Button
-          label="Hapus"
-          severity="danger"
-          class="w-full"
-          @click="confirmDelete"
-        />
-      </div>
-    </template>
-  </Dialog>
+    :error-message="deleteError"
+    @confirm="confirmDelete"
+  />
 </template>

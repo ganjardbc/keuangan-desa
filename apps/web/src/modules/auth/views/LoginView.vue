@@ -84,14 +84,6 @@ const fillMockData = (mockEmail: string, mockPass: string) => {
   <div
     class="min-h-screen bg-slate-50 text-slate-900 flex items-center justify-center relative overflow-hidden px-4"
   >
-    <!-- Glow Background Effects -->
-    <div
-      class="absolute top-1/4 left-1/4 w-96 h-96 bg-violet-600/5 rounded-full blur-3xl"
-    ></div>
-    <div
-      class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl"
-    ></div>
-
     <div class="w-full max-w-sm relative z-10">
       <!-- Glassmorphic Card -->
       <Card>
@@ -99,7 +91,7 @@ const fillMockData = (mockEmail: string, mockPass: string) => {
           <!-- Logo Header -->
           <div class="flex items-center justify-between gap-2">
             <div
-              class="h-12 w-12 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center shadow-xl shadow-indigo-500/20"
+              class="h-12 w-12 rounded-2xl bg-primary-500 flex items-center justify-center shadow-xl"
             >
               <i class="pi pi-wallet text-white text-xl"></i>
             </div>
@@ -176,7 +168,7 @@ const fillMockData = (mockEmail: string, mockPass: string) => {
             <div class="text-center">
               <router-link
                 to="/register"
-                class="text-xs text-violet-600 hover:underline font-semibold"
+                class="text-xs text-primary-600 hover:underline font-semibold"
               >
                 Belum punya akun? Daftar di sini
               </router-link>
@@ -187,14 +179,14 @@ const fillMockData = (mockEmail: string, mockPass: string) => {
     </div>
 
     <!-- Floating Button for Mock Accounts -->
-    <button
+    <Button
       type="button"
-      class="fixed bottom-6 right-6 z-50 flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-500 text-white shadow-xl shadow-indigo-500/30 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer border-none focus:outline-none"
+      class="!fixed !bottom-6 !right-6 !z-50 !flex !items-center !justify-center !w-14 !h-14 !rounded-full !bg-gradient-to-tr !from-violet-600 !to-indigo-500 !text-white !shadow-xl !shadow-indigo-500/30 hover:!scale-110 active:!scale-95 !transition-all !duration-300 !cursor-pointer !border-none focus:!outline-none"
       title="Akun Demo (Testing)"
       @click="showMockAccounts = true"
     >
       <i class="pi pi-users text-xl"></i>
-    </button>
+    </Button>
 
     <!-- Dialog for Mock Accounts -->
     <Dialog
@@ -211,11 +203,11 @@ const fillMockData = (mockEmail: string, mockPass: string) => {
         </p>
 
         <div class="space-y-2">
-          <button
+          <Button
             v-for="account in mockAccounts"
             :key="account.email"
             type="button"
-            class="w-full flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-left text-xs transition-all duration-200 hover:-translate-y-0.5 cursor-pointer group"
+            class="!w-full !flex !items-center !justify-between !p-3 !rounded-xl !bg-slate-50 hover:!bg-slate-100 !border !border-slate-200 !text-left !text-xs !transition-all !duration-200 hover:!-translate-y-0.5 !cursor-pointer !group !shadow-none !normal-case !font-normal"
             @click="fillMockData(account.email, account.password)"
           >
             <div class="space-y-0.5">
@@ -233,7 +225,7 @@ const fillMockData = (mockEmail: string, mockPass: string) => {
               :severity="account.severity"
               class="text-[9px]"
             />
-          </button>
+          </Button>
         </div>
       </div>
     </Dialog>

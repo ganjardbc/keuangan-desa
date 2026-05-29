@@ -189,6 +189,25 @@ export const useWargaStore = defineStore('warga', () => {
     }
   }
 
+  async function assignIuranBulk(bulkMapping: {
+    wargaIds: string[]
+    jenisIuranId: string
+    customAmount?: number | null
+  }) {
+    loading.value = true
+    try {
+      await api.post(`/warga/iuran/bulk`, bulkMapping)
+      await fetchWarga()
+      return true
+    } catch (err: any) {
+      error.value =
+        err.response?.data?.message || 'Gagal memetakan iuran massal.'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     wargaList,
     rekapList,
@@ -205,5 +224,6 @@ export const useWargaStore = defineStore('warga', () => {
     toggleWargaStatus,
     assignIuran,
     unassignIuran,
+    assignIuranBulk,
   }
 })

@@ -82,6 +82,13 @@ export class WargaController {
     );
   }
 
+  @Post('iuran/bulk')
+  @RequirePermission('warga:write')
+  @Audit('PETAKAN_IURAN_BULK')
+  async assignIuranBulk(@Body() body: any, @Request() req: RequestWithUser) {
+    return this.wargaService.assignIuranBulk(body, req.user.tenantId);
+  }
+
   @Post(':wargaId/iuran')
   @RequirePermission('warga:write')
   async assignIuran(

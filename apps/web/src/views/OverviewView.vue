@@ -198,11 +198,6 @@ const activeWargaCount = computed(
   >
     <template #actions>
       <Button
-        label="Kelola Transaksi"
-        icon="pi pi-list"
-        @click="router.push('/dashboard/transactions')"
-      />
-      <Button
         v-if="authStore.hasPermission('report:export')"
         label="Cetak Laporan"
         icon="pi pi-print"
